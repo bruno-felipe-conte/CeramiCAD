@@ -9,6 +9,8 @@
 [![Escala A4](https://img.shields.io/badge/Moldes%202D-A4%201%3A1%20Real-4f7cac?style=for-the-badge)](#exporta%C3%A7%C3%A3o--impress%C3%A3o-11)
 [![Arquivo %C3%9Anico](https://img.shields.io/badge/Deploy-HTML%20%C3%9Anico%20Autocontido-1f242d?style=for-the-badge)](#como-usar)
 
+### 🌐 [Abrir CeramiCAD Online (GitHub Pages)](https://bruno-felipe-conte.github.io/CeramiCAD/CeramiCAD.html)
+
 </div>
 
 ---
