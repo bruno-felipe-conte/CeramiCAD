@@ -5546,6 +5546,359 @@
       buildOneTallCruet(54 + exp * 0.4,  0x2e2724, 0x4f3e34,  1);
     }
 
+    // =========================================================================
+    // MOTOR GEOMÉTRICO DO LOTE 42 — 5 PROJETOS (221 A 225)
+    // =========================================================================
+    // 221: TRIO ORGÂNICO TERRACOTA "NEURALSIP" (Conjunto de 3 Peças Esculturais c/ Tampas & Bico)
+    function buildOrganicTerracottaTrioSolid(g) {
+      const exp = isExploded ? 24 : 0;
+      const tL = getAccT('lid');
+      const terraMat = new THREE.MeshStandardMaterial({ color: 0xc97b50, roughness: 0.62, metalness: 0.03, side: THREE.DoubleSide });
+      const corkMat = new THREE.MeshStandardMaterial({ color: 0xb88b5a, roughness: 0.92 });
+      const lidMat = selectedAccessoryId === 'lid' ? claySelectedMat : new THREE.MeshStandardMaterial({ color: 0xb56940, roughness: 0.55, side: THREE.DoubleSide });
+      const woodLidMat = selectedAccessoryId === 'lid' ? claySelectedMat : new THREE.MeshStandardMaterial({ color: 0x9e714c, roughness: 0.58 });
+
+      const buildOrganicVessel = (cx, cfg) => {
+        const grp = new THREE.Group();
+        grp.position.set(cx, 0, 0);
+        const rings = 28, segs = isSectionCut ? 20 : 40, maxA = isSectionCut ? Math.PI : Math.PI * 2;
+        const th = 5.0;
+        const pos = [];
+        const pushQ = (a, b, c, d) => pos.push(...a, ...b, ...c, ...a, ...c, ...d);
+
+        for (let r = 0; r < rings; r++) {
+          const v0 = r / rings, v1 = (r + 1) / rings;
+          for (let s = 0; s < segs; s++) {
+            const u0 = (s / segs) * maxA, u1 = ((s + 1) / segs) * maxA;
+            const o00 = cfg.getPt(u0, v0, 0), o10 = cfg.getPt(u1, v0, 0), o11 = cfg.getPt(u1, v1, 0), o01 = cfg.getPt(u0, v1, 0);
+            const i00 = cfg.getPt(u0, v0, -th), i10 = cfg.getPt(u1, v0, -th), i11 = cfg.getPt(u1, v1, -th), i01 = cfg.getPt(u0, v1, -th);
+            pushQ(o00, o10, o11, o01);
+            pushQ(i10, i00, i01, i11);
+            if (r === rings - 1) pushQ(o01, o11, i11, i01);
+          }
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        geo.computeVertexNormals();
+        addMeshWithEdges(grp, geo, terraMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 24);
+        addMeshWithEdges(grp, new THREE.CylinderGeometry(cfg.rBase, cfg.rBase, 6, 32), terraMat, [0, 3, 0]);
+        if (cfg.addExtras) cfg.addExtras(grp);
+        g.add(grp);
+      };
+
+      // 1. Garrafa Alta Escultural (Esquerda: x = -114, H = 205mm + Tampa Orgânica em Concha)
+      buildOrganicVessel(-114 - exp * 0.45, {
+        rBase: 36,
+        getPt: (u, v, rOff) => {
+          const y = v * 205;
+          let r = 36 + 5 * Math.sin(v * Math.PI * 2.2);
+          if (v > 0.58) {
+            const t = (v - 0.58) / 0.42;
+            r = 40 * (1 - t) + 15 * t;
+          }
+          const cx = 4.5 * Math.sin(v * Math.PI * 1.5);
+          const wave = 2.2 * Math.sin(u * 2 + v * 4.5);
+          const rr = Math.max(8, r + wave + rOff);
+          return [cx + rr * Math.cos(u), y, rr * Math.sin(u)];
+        },
+        addExtras: (grp) => {
+          // Tampa orgânica escultural em concha no topo (clicável)
+          const stGrp = new THREE.Group();
+          stGrp.position.set(0, 206 + exp * 1.1 + (tL.height || 0), (tL.offset || 0));
+          const plug = new THREE.Mesh(new THREE.CylinderGeometry(11, 9.5, 16, 18), lidMat);
+          plug.position.y = -4; plug.userData.accessoryType = 'lid'; stGrp.add(plug);
+          const shell = new THREE.Mesh(new THREE.SphereGeometry(17, 18, 14), lidMat);
+          shell.scale.set(0.95, 1.35, 0.55);
+          shell.position.set(0, 18, 0);
+          shell.rotation.z = -0.18;
+          shell.userData.accessoryType = 'lid';
+          stGrp.add(shell);
+          grp.add(stGrp);
+        }
+      });
+
+      // 2. Garrafa / Jarra Média c/ Bico Lateral no Ombro Direito & Rolha c/ Tampa (Centro: x = 0, H = 174mm)
+      buildOrganicVessel(0, {
+        rBase: 40,
+        getPt: (u, v, rOff) => {
+          const y = v * 174;
+          let r = 40 + 8 * Math.sin(Math.min(1, v / 0.72) * Math.PI);
+          if (v > 0.68) {
+            const t = (v - 0.68) / 0.32;
+            r = 44 * (1 - t) + 16 * t;
+          }
+          const cx = -3.5 * Math.sin(v * Math.PI);
+          const rr = Math.max(8, r + rOff);
+          return [cx + rr * Math.cos(u), y, rr * Math.sin(u)];
+        },
+        addExtras: (grp) => {
+          // Bico lateral tubular curto saindo do ombro direito (+X a 38°)
+          const spoutGeo = buildHollowTubeGeo(14, 11, 36, 3.8, 20);
+          addMeshWithEdges(grp, spoutGeo, terraMat, [34, 136, 0], [0, 0, -0.62]);
+          // Rolha de cortiça + tampinha terracota no topo
+          const cGrp = new THREE.Group();
+          cGrp.position.set(0, 178 + exp * 1.1 + (tL.height || 0), (tL.offset || 0));
+          const cork = new THREE.Mesh(new THREE.CylinderGeometry(12.5, 11, 14, 20), corkMat);
+          cork.userData.accessoryType = 'lid'; cGrp.add(cork);
+          const cap = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 8, 24), lidMat);
+          cap.position.y = 10; cap.userData.accessoryType = 'lid'; cGrp.add(cap);
+          grp.add(cGrp);
+        }
+      });
+
+      // 3. Pote / Jarra Inclinada Assimétrica c/ Tampa Plana Oblíqua (Direita: x = +116, H = 148mm)
+      buildOrganicVessel(116 + exp * 0.45, {
+        rBase: 42,
+        getPt: (u, v, rOff) => {
+          const yBase = v * 148;
+          const r = 42 + 6 * Math.sin(v * Math.PI * 1.3) - 10 * v;
+          const cx = 14 * Math.pow(v, 1.35) - 6 * Math.sin(v * Math.PI);
+          const tiltY = v > 0.7 ? (-10 * Math.cos(u) * ((v - 0.7) / 0.3)) : 0;
+          const rr = Math.max(10, r + rOff);
+          return [cx + rr * Math.cos(u), yBase + tiltY, rr * Math.sin(u)];
+        },
+        addExtras: (grp) => {
+          const tMesh = addMeshWithEdges(grp, new THREE.CylinderGeometry(31, 30, 8, 28), woodLidMat,
+            [14, 150 + exp * 1.1 + (tL.height || 0), (tL.offset || 0)],
+            [0, 0, -0.32], [1, 1, 1], 20, 'lid'
+          );
+        }
+      });
+    }
+
+    // 222: CONJUNTO 2 GALHETEIROS + 2 TIGELINHAS + BANDEJA REDONDA (Conjunto de 5 Peças Salpicadas)
+    function buildCruetTray5PieceSolid(g) {
+      const exp = isExploded ? 22 : 0;
+      const tL = getAccT('lid');
+      const speckledMat = new THREE.MeshStandardMaterial({ color: 0x8f8c7a, roughness: 0.44, metalness: 0.05, side: THREE.DoubleSide });
+      const bowlMat = new THREE.MeshStandardMaterial({ color: 0x9c9278, roughness: 0.42, metalness: 0.05, side: THREE.DoubleSide });
+      const corkMat = new THREE.MeshStandardMaterial({ color: 0xb8895c, roughness: 0.92 });
+      const capMat = selectedAccessoryId === 'lid' ? claySelectedMat : speckledMat;
+
+      // 1. Bandeja Redonda Rasa c/ Borda Elevada (Ø236 × H=16mm)
+      const trayProf = buildVesselCrossSection([[112, 0], [118, 16]], 5.5, 6.0);
+      addMeshWithEdges(g, buildThickRevolvedProfile(trayProf, 52), speckledMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 24);
+
+      // 2. 2× Galheteiros Cônicos Altos ao Fundo (x = ±42, z = -34, Ø68 -> Ø38 × H=158mm)
+      [-42, 42].forEach(cx => {
+        const grp = new THREE.Group();
+        grp.position.set(cx, 6 + exp * 0.5, -34);
+
+        // Corpo cônico c/ pequeno bico frontal (+Z)
+        const rings = 20, segs = isSectionCut ? 18 : 36, maxA = isSectionCut ? Math.PI : Math.PI * 2;
+        const pos = [];
+        const pushQ = (a, b, c, d) => pos.push(...a, ...b, ...c, ...a, ...c, ...d);
+        const getPt = (u, v, rOff = 0) => {
+          let r = 34 - 15 * Math.min(1, v / 0.92);
+          if (v > 0.90) r += 4.5 * ((v - 0.90) / 0.10); // colar aberto na boca
+          const sp = 7.5 * Math.pow(Math.max(0, Math.sin(u)), 5.0) * Math.pow(Math.max(0, (v - 0.84) / 0.16), 1.3);
+          const rr = Math.max(5, r + sp + rOff);
+          return [rr * Math.cos(u), v * 158, rr * Math.sin(u)];
+        };
+        for (let r = 0; r < rings; r++) {
+          const v0 = r / rings, v1 = (r + 1) / rings;
+          for (let s = 0; s < segs; s++) {
+            const u0 = (s / segs) * maxA, u1 = ((s + 1) / segs) * maxA;
+            const o00 = getPt(u0, v0, 0), o10 = getPt(u1, v0, 0), o11 = getPt(u1, v1, 0), o01 = getPt(u0, v1, 0);
+            const i00 = getPt(u0, v0, -4.5), i10 = getPt(u1, v0, -4.5), i11 = getPt(u1, v1, -4.5), i01 = getPt(u0, v1, -4.5);
+            pushQ(o00, o10, o11, o01);
+            pushQ(i10, i00, i01, i11);
+            if (r === rings - 1) pushQ(o01, o11, i11, i01);
+          }
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        geo.computeVertexNormals();
+        addMeshWithEdges(grp, geo, speckledMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 24);
+        addMeshWithEdges(grp, new THREE.CylinderGeometry(34, 34, 5, 32), speckledMat, [0, 2.5, 0]);
+
+        // Rolha de Cortiça + Tampinha Cerâmica c/ Pegador no Topo (clicável)
+        const sGrp = new THREE.Group();
+        sGrp.position.set(0, 162 + exp * 1.1 + (tL.height || 0), (tL.offset || 0));
+        const cork = new THREE.Mesh(new THREE.CylinderGeometry(16, 13, 18, 20), corkMat);
+        cork.userData.accessoryType = 'lid'; sGrp.add(cork);
+        const disk = new THREE.Mesh(new THREE.CylinderGeometry(17.5, 17.5, 4.5, 24), capMat);
+        disk.position.y = 10.5; disk.userData.accessoryType = 'lid'; sGrp.add(disk);
+        const nub = new THREE.Mesh(new THREE.BoxGeometry(9, 4.5, 5), capMat);
+        nub.position.y = 14.5; nub.userData.accessoryType = 'lid'; sGrp.add(nub);
+        grp.add(sGrp);
+
+        g.add(grp);
+      });
+
+      // 3. 2× Tigelinhas / Molheiras Rasas na Frente (x = ±48, z = +46, Ø88 × H=38mm)
+      const bowlProf = buildVesselCrossSection([[24, 0], [36, 10], [43, 24], [44, 38]], 4.2, 4.8);
+      const bowlGeo = buildThickRevolvedProfile(bowlProf, 36);
+      [-48, 48].forEach(bx => {
+        addMeshWithEdges(g, bowlGeo.clone(), bowlMat, [bx, 6 + exp * 0.8, 46], [0, 0, 0], [1, 1, 1], 24);
+      });
+    }
+
+    // 223: COLEÇÃO DE 5 GARRAFAS MINIMALISTAS JAPONESAS (Conjunto Escultural de 5 Peças)
+    function buildMinimalist5BottlesSolid(g) {
+      const exp = isExploded ? 18 : 0;
+      const specs = [
+        // 1. Traseira Esq: Cilindro Alto Creme c/ Gargalo Longo Fino (Ø68 × 250mm)
+        { x: -102, z: -26, color: 0xe6e0d5, pts: [[34, 0], [34, 178], [16, 198], [9, 250], [12, 252]] },
+        // 2. Frente Esq: Cone Puro Cinza Claro c/ Boca Trompete Aberta (Ø84 → Ø22 × 182mm)
+        { x: -56,  z: 36,  color: 0xbac0ba, pts: [[42, 0], [40, 14], [14, 152], [18, 172], [25, 182]] },
+        // 3. Traseira Centro: Cilindro Médio Creme c/ Gargalo Trompete Alto (Ø66 × 224mm)
+        { x: -4,   z: -32, color: 0xebe6dd, pts: [[33, 0], [33, 154], [14, 184], [15, 206], [24, 224]] },
+        // 4. Frente Centro: Tronco-Cone Esguio Verde Musgo c/ Mini Boca Aba Chata (Ø74 → Ø48 × 178mm)
+        { x: 34,   z: 42,  color: 0x8e968a, pts: [[37, 0], [26, 158], [11, 166], [9, 174], [16, 178]] },
+        // 5. Traseira Dir: Cilindro Esguio Verde Escuro c/ Boca Aba Larga (Ø64 × 208mm)
+        { x: 96,   z: -14, color: 0x626b62, pts: [[32, 0], [28, 170], [14, 184], [14, 200], [22, 208]] }
+      ];
+
+      specs.forEach((sp, idx) => {
+        const mat = new THREE.MeshStandardMaterial({ color: sp.color, roughness: 0.68, metalness: 0.03, side: THREE.DoubleSide });
+        const prof = buildVesselCrossSection(sp.pts, 4.5, 5.0);
+        addMeshWithEdges(g, buildThickRevolvedProfile(prof, 40), mat, [sp.x + (idx - 2) * exp * 0.4, 0, sp.z], [0, 0, 0], [1, 1, 1], 24);
+      });
+    }
+
+    // 224: Saleiro / Açucareiro Quadrado Trapezoidal em Placas c/ Tampa Chanfrada + Colher
+    function buildSquareSaltBoxSolid(g) {
+      const exp = isExploded ? 26 : 0;
+      const tL = getAccT('lid');
+      const tH = getAccT('handle');
+      const boxMat = new THREE.MeshStandardMaterial({ color: 0xc28b4e, roughness: 0.52, metalness: 0.04, side: THREE.DoubleSide });
+      const lidMat = selectedAccessoryId === 'lid'
+        ? claySelectedMat
+        : new THREE.MeshStandardMaterial({ color: 0x523626, roughness: 0.46, metalness: 0.06, side: THREE.DoubleSide });
+      const spoonMat = selectedAccessoryId === 'handle'
+        ? claySelectedMat
+        : new THREE.MeshStandardMaterial({ color: 0x6b4530, roughness: 0.42 });
+
+      const b = 43, t = 51, H = 88, th = 6.5; // Base 86×86 -> Topo 102×102 × H=88mm
+
+      // 1. Fundo quadrado 86×86mm
+      addMeshWithEdges(g, new THREE.BoxGeometry(b * 2, th, b * 2), boxMat, [0, th / 2 - exp * 0.3, 0]);
+
+      // 2. 4 Paredes Trapezoidais Inclinadas (hexaedros exatos!)
+      // Traseira (-Z)
+      addMeshWithEdges(g, buildHexahedronGeo([
+        [-b, 0, -b], [b, 0, -b], [b, 0, -b + th], [-b, 0, -b + th],
+        [-t, H, -t], [t, H, -t], [t, H, -t + th], [-t, H, -t + th]
+      ]), boxMat);
+      // Frontal (+Z) — oculta no corte seccional
+      if (!isSectionCut) {
+        addMeshWithEdges(g, buildHexahedronGeo([
+          [-b, 0, b - th], [b, 0, b - th], [b, 0, b], [-b, 0, b],
+          [-t, H, t - th], [t, H, t - th], [t, H, t], [-t, H, t]
+        ]), boxMat);
+      }
+      // Esquerda (-X) & Direita (+X)
+      addMeshWithEdges(g, buildHexahedronGeo([
+        [-b, 0, -b], [-b + th, 0, -b], [-b + th, 0, b], [-b, 0, b],
+        [-t, H, -t], [-t + th, H, -t], [-t + th, H, t], [-t, H, t]
+      ]), boxMat);
+      addMeshWithEdges(g, buildHexahedronGeo([
+        [b - th, 0, -b], [b, 0, -b], [b, 0, b], [b - th, 0, b],
+        [t - th, H, -t], [t, H, -t], [t, H, t], [t - th, H, t]
+      ]), boxMat);
+
+      // 3. Tampa Quadrada 104×104×10mm c/ Recorte em Chave (U + círculo) na Borda Direita p/ Colher (clicável!)
+      const lidSh = new THREE.Shape();
+      const hl = 52;
+      lidSh.moveTo(-hl, -hl); lidSh.lineTo(hl, -hl);
+      lidSh.lineTo(hl, -9);
+      lidSh.lineTo(28, -9);
+      lidSh.absarc(24, 0, 10, -Math.PI * 0.45, Math.PI * 0.45, true);
+      lidSh.lineTo(hl, 9);
+      lidSh.lineTo(hl, hl); lidSh.lineTo(-hl, hl); lidSh.closePath();
+
+      const lidGeo = new THREE.ExtrudeGeometry(lidSh, { depth: 10.0, bevelEnabled: true, bevelThickness: 0.7, bevelSize: 0.7, bevelSegments: 2 });
+      lidGeo.rotateX(-Math.PI / 2);
+      addMeshWithEdges(g, lidGeo, lidMat,
+        [0, H + exp * 1.1 + (tL.height || 0), (tL.offset || 0)],
+        [0, ((tL.angle || 0) * Math.PI) / 180, 0], [1, 1, 1], 18, 'lid'
+      );
+
+      // 4. Colher Inclinada saindo pelo Recorte da Tampa (clicável!)
+      const spGrp = new THREE.Group();
+      spGrp.position.set(16 + (tH.offset || 0), 54 + exp * 1.4 + (tH.height || 0), 0);
+      spGrp.rotation.z = -0.58 + ((tH.angle || 0) * Math.PI) / 180;
+      const spHandle = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 4.2, 106, 14), spoonMat);
+      spHandle.scale.set(1, 1, 0.6);
+      spHandle.userData.accessoryType = 'handle';
+      spGrp.add(spHandle);
+      const spBowl = new THREE.Mesh(new THREE.SphereGeometry(12, 16, 12, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5), spoonMat);
+      spBowl.position.set(0, -52, 0);
+      spBowl.scale.set(0.9, 0.6, 1.2);
+      spBowl.userData.accessoryType = 'handle';
+      spGrp.add(spBowl);
+      g.add(spGrp);
+    }
+
+    // 225: CONJUNTO MORINGA GEOMÉTRICA BRASILEIRA + 2 COPOS QUADRADOS (Conjunto de 3 Peças em Terracota)
+    function buildBrazilianMoringaSetSolid(g) {
+      const exp = isExploded ? 26 : 0;
+      const tL = getAccT('lid');
+      const terraMat = new THREE.MeshStandardMaterial({ color: 0xa64e2c, roughness: 0.56, metalness: 0.04, side: THREE.DoubleSide });
+      const glazeInMat = new THREE.MeshStandardMaterial({ color: 0x5c2814, roughness: 0.16, metalness: 0.12, side: THREE.DoubleSide });
+      const lidMat = selectedAccessoryId === 'lid' ? claySelectedMat : terraMat;
+
+      // Helper para construir prisma quadrado oco em 3 bandas (base -> ombro -> pescoço)
+      const addSqBand = (parent, r0, y0, r1, y1, th, matOut, matIn) => {
+        const sq = (r, y) => [[-r, y, -r], [r, y, -r], [r, y, r], [-r, y, r]];
+        const o0 = sq(r0, y0), o1 = sq(r1, y1), i0 = sq(r0 - th, y0), i1 = sq(r1 - th, y1);
+        const pos = [];
+        const pushQ = (a, b, c, d) => pos.push(...a, ...b, ...c, ...a, ...c, ...d);
+        const maxF = isSectionCut ? 3 : 4;
+        for (let f = 0; f < maxF; f++) {
+          const fn = (f + 1) % 4;
+          pushQ(o0[f], o0[fn], o1[fn], o1[f]);
+          pushQ(i0[fn], i0[f], i1[f], i1[fn]);
+          pushQ(o1[f], o1[fn], i1[fn], i1[f]);
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        geo.computeVertexNormals();
+        addMeshWithEdges(parent, geo, matOut, [0, 0, 0], [0, 0, 0], [1, 1, 1], 16);
+      };
+
+      // 1. MORINGA GEOMÉTRICA (à esquerda: x = -46)
+      const mGrp = new THREE.Group();
+      mGrp.position.set(-46 - exp * 0.35, 0, 0);
+      const th = 5.5;
+      // Fundo quadrado 76×76mm
+      addMeshWithEdges(mGrp, new THREE.BoxGeometry(76, th, 76), terraMat, [0, th / 2, 0]);
+      // Corpo tronco-piramidal invertido (base 76 -> ombro 126 em y=126)
+      addSqBand(mGrp, 38, th, 63, 126, th, terraMat, glazeInMat);
+      // Ombro piramidal truncado (126 -> pescoço 46 em y=162)
+      addSqBand(mGrp, 63, 126, 23, 162, th, terraMat, glazeInMat);
+      // Pescoço prismático quadrado levemente afilado (46 -> 40 em y=214)
+      addSqBand(mGrp, 23, 162, 20, 214, 4.5, terraMat, glazeInMat);
+
+      // 2. TAMPA PIRAMIDAL QUADRADA C/ PINO ESMALTADO LONGO (clicável!)
+      const lGrp = new THREE.Group();
+      lGrp.position.set(0, 216 + exp * 1.4 + (tL.height || 0), (tL.offset || 0));
+      lGrp.rotation.y = ((tL.angle || 0) * Math.PI) / 180;
+      // Pino quadrado longo esmaltado (28×28 × 32mm) que encaixa dentro do pescoço
+      addMeshWithEdges(lGrp, new THREE.BoxGeometry(28, 32, 28), glazeInMat, [0, -14, 0], [0, 0, 0], [1, 1, 1], 18, 'lid');
+      // Cabeça piramidal quadrada (base 48×48 -> ápice H=24mm)
+      const pyrGeo = new THREE.ConeGeometry(34, 24, 4);
+      pyrGeo.rotateY(Math.PI / 4);
+      addMeshWithEdges(lGrp, pyrGeo, lidMat, [0, 14, 0], [0, 0, 0], [1, 1, 1], 16, 'lid');
+      mGrp.add(lGrp);
+      g.add(mGrp);
+
+      // 3. 2× COPOS QUADRADOS DE CANTOS SUAVES (interior esmaltado escuro, base 58 -> boca 72 × H=82mm)
+      [[54, 42], [92, -32]].forEach(([cx, cz]) => {
+        const cGrp = new THREE.Group();
+        cGrp.position.set(cx + exp * 0.4, 0, cz);
+        addMeshWithEdges(cGrp, new THREE.BoxGeometry(58, 5, 58), terraMat, [0, 2.5, 0]);
+        addSqBand(cGrp, 29, 5, 36, 82, 4.2, terraMat, glazeInMat);
+        // Interior esmaltado escuro brilhante visível
+        const inGeo = new THREE.BoxGeometry(56, 74, 56);
+        const inM = new THREE.Mesh(inGeo, glazeInMat);
+        inM.position.y = 43;
+        cGrp.add(inM);
+        g.add(cGrp);
+      });
+    }
+
     const PIECES = [
       // --- LOTE 01 ---
       // -----------------------------------------------------------------------
@@ -27744,6 +28097,210 @@
           return svgDefs() + s1;
         }
       }
+,
+
+      // --- LOTE 42 ---
+      {
+        id: '221', batch: 42, code: '221', shortName: 'Trio Terracota Neuralsip',
+        name: '221. Trio Orgânico Terracota "Neuralsip" (Garrafa Alta + Jarra c/ Bico Lateral + Pote Inclinado) (Lote 42 — 2 Folhas A4)',
+        thicknessMm: 5.0, sheets: 2, defaultAcc: 'lid',
+        desc: 'Conjunto autoral de 3 peças orgânicas em terracota natural fosca (E=5.0mm): garrafa alta com tampa escultural em concha (H=205mm), jarra média com bico tubular lateral no ombro e rolha com tampa (H=174mm), e pote inclinado com tampa plana oblíqua (H=148mm).',
+        partsList: [
+          'Peça 1: Garrafa Alta Orgânica H=205mm + Tampa Concha',
+          'Peça 2: Jarra Média H=174mm + Bico Lateral 36mm + Rolha Cortiça',
+          'Peça 3: Pote Inclinado H=148mm + Tampa Plana Oblíqua Ø62mm'
+        ],
+        buildSolid: (g) => buildOrganicTerracottaTrioSolid(g),
+        buildPlates: () => {
+          const sk = createSkeletonBuilder();
+          [[-114, 38, 205], [0, 44, 174], [116, 42, 148]].forEach(([cx, r, h]) => {
+            sk.addRing(r, r, h * 0.45, 20, sk.eOuter, cx, 0);
+            sk.addRing(r * 0.5, r * 0.5, h, 16, sk.eAccent, cx, 0);
+          });
+          return sk;
+        },
+        draw2D: () => {
+          const s1 = `<g transform="translate(0, 0)">` +
+            a4SheetFrame(0, 1, 2, '221', 'Trio Orgânico Terracota — Gabaritos de Silhueta das 3 Peças (Esc. 75%)', 5.0) +
+            `<g transform="translate(64, 190) scale(0.75)"><path d="M -36 0 Q -44 -60 -36 -120 Q -18 -160 -15 -205 L 15 -205 Q 18 -160 40 -120 Q 44 -60 36 0 Z" fill="#f3eadc" stroke="#181615" stroke-width="1.1"/><text x="0" y="-85" text-anchor="middle" font-size="3.4" font-weight="700" fill="#181615">1. Garrafa Alta</text></g>` +
+            `<g transform="translate(152, 190) scale(0.75)"><path d="M -40 0 Q -50 -68 -42 -124 Q -24 -152 -16 -174 L 16 -174 Q 24 -152 46 -136 L 62 -148 L 48 -114 Q 50 -62 40 0 Z" fill="#f3eadc" stroke="#181615" stroke-width="1.1"/><text x="0" y="-85" text-anchor="middle" font-size="3.4" font-weight="700" fill="#181615">2. Jarra Bico</text></g>` +
+            `<g transform="translate(240, 190) scale(0.75)"><path d="M -42 0 Q -50 -52 -32 -104 L -16 -156 L 44 -138 Q 48 -68 42 0 Z" fill="#f3eadc" stroke="#181615" stroke-width="1.1"/><text x="0" y="-75" text-anchor="middle" font-size="3.4" font-weight="700" fill="#181615">3. Pote Inclinado</text></g>` +
+            `</g>`;
+          const s2 = `<g transform="translate(0, 225)">` +
+            a4SheetFrame(0, 2, 2, '221', 'Trio Orgânico Terracota — 3× Fundos, Bico Lateral & Tampas (1:1)', 5.0) +
+            drawAnnotatedDisk(62, 76, 36, { title: 'Fundo #1 Ø72', subtitle: 'E=6mm', wBevel: 5 }) +
+            drawAnnotatedDisk(148, 76, 40, { title: 'Fundo #2 Ø80', subtitle: 'E=6mm', wBevel: 5 }) +
+            drawAnnotatedDisk(236, 76, 42, { title: 'Fundo #3 Ø84', subtitle: 'E=6mm', wBevel: 5 }) +
+            drawAnnotatedRect(24, 144, 78, 36, { title: 'Bico Lateral #2 (78×36mm)', bevelLeft: 4, bevelRight: 4 }) +
+            drawAnnotatedDisk(164, 162, 31, { title: 'Tampa #3 Ø62', subtitle: 'Plana oblíqua', wBevel: 3 }) +
+            `</g>`;
+          return svgDefs() + filterSheetsSvg([s1, s2]);
+        }
+      },
+
+      {
+        id: '222', batch: 42, code: '222', shortName: 'Conjunto Galheteiros Bandeja',
+        name: '222. Conjunto de Mesa 5 Peças — 2 Galheteiros c/ Cortiça + 2 Tigelinhas + Bandeja Redonda (Lote 42 — 2 Folhas A4)',
+        thicknessMm: 5.0, sheets: 2, defaultAcc: 'lid',
+        desc: 'Conjunto coordenado de 5 peças em grés salpicado: bandeja circular rasa (Ø236×16mm), 2 galheteiros cônicos altos (Ø68→Ø38×158mm) com bico discreto e rolha de cortiça + tampinha cerâmica com pegador, e 2 tigelinhas molheiras (Ø88×38mm).',
+        partsList: [
+          '1× Bandeja Circular Rasa Ø236×16mm',
+          '2× Galheteiros Cônicos Ø68→Ø38×158mm + 2× Rolhas c/ Tampinha Cerâmica',
+          '2× Tigelinhas Molheiras Ø88×38mm'
+        ],
+        buildSolid: (g) => buildCruetTray5PieceSolid(g),
+        buildPlates: () => {
+          const sk = createSkeletonBuilder();
+          sk.addRing(118, 118, 16, 32, sk.eOuter);
+          [-42, 42].forEach(cx => {
+            const r0 = sk.addRing(34, 34, 6, 18, sk.eInner, cx, -34);
+            const r1 = sk.addRing(20, 20, 164, 18, sk.eAccent, cx, -34);
+            sk.connectRings(r0, r1, 18, 3, sk.eOuter);
+          });
+          [-48, 48].forEach(bx => sk.addRing(44, 44, 44, 20, sk.eAccent, bx, 46));
+          return sk;
+        },
+        draw2D: () => {
+          const s1 = `<g transform="translate(0, 0)">` +
+            a4SheetFrame(0, 1, 2, '222', 'Conjunto 5 Peças — Bandeja Redonda Ø236 (Esc. 75%) & 2× Tigelinhas (1:1)', 5.5) +
+            drawAnnotatedDisk(106, 108, 88.5, { title: '1. Bandeja Circular (Real Ø236mm • esc 75%)', subtitle: 'Subir borda 16mm • E=6.0mm', wBevel: 5 }) +
+            drawAnnotatedDisk(238, 108, 44, { title: '2. Tigelinha (2×)', subtitle: 'Ø88×38mm • 1:1', wBevel: 4 }) +
+            `</g>`;
+          const s2 = `<g transform="translate(0, 225)">` +
+            a4SheetFrame(0, 2, 2, '222', 'Conjunto 5 Peças — Setor Galheteiro Cônico (2×), Fundo & Tampinhas (1:1)', 4.5) +
+            drawAnnotatedSector(118, 315, 296, 136, 42, { title: '3. Parede Galheteiro (Cortar 2× • s=160mm)', dTop: '68.0', dBot: '38.0', bevelDeg: 45, wBevel: 4.5, wBaseBevel: 4.5 }) +
+            drawAnnotatedDisk(242, 74, 34, { title: '4. Fundo Ø68 (2×)', subtitle: 'E=5.0mm', wBevel: 4.5 }) +
+            drawAnnotatedDisk(242, 154, 17.5, { title: '5. Tampinha Ø35', subtitle: 'Colar na cortiça (2×)', wBevel: 2.5 }) +
+            `</g>`;
+          return svgDefs() + filterSheetsSvg([s1, s2]);
+        }
+      },
+
+      {
+        id: '223', batch: 42, code: '223', shortName: 'Coleção 5 Garrafas Japonesas',
+        name: '223. Coleção Escultural de 5 Garrafas Minimalistas Japonesas (Conjunto 5 Peças — Lote 42 — 2 Folhas A4)',
+        thicknessMm: 4.5, sheets: 2,
+        desc: 'Composição de 5 garrafas minimalistas em tons naturais (creme, cinza e verde-musgo fosco): cilindros e cones puros com ombros marcados e 5 variações de gargalo (fino longo, trompete aberto, aba chata e cone puro).',
+        partsList: [
+          'Garrafa #1: Cilindro Alto Ø68×252mm (Gargalo Longo)',
+          'Garrafa #2: Cone Puro Ø84→Ø28×182mm (Boca Trompete)',
+          'Garrafa #3: Cilindro Ø66×224mm (Trompete Alto)',
+          'Garrafa #4: Cone Esguio Ø74→Ø48×178mm (Aba Chata)',
+          'Garrafa #5: Cilindro Verde Escuro Ø64×208mm'
+        ],
+        buildSolid: (g) => buildMinimalist5BottlesSolid(g),
+        buildPlates: () => {
+          const sk = createSkeletonBuilder();
+          [[-102, -26, 34, 252], [-56, 36, 42, 182], [-4, -32, 33, 224], [34, 42, 37, 178], [96, -14, 32, 208]].forEach(([cx, cz, r, h]) => {
+            const r0 = sk.addRing(r, r, 0, 16, sk.eInner, cx, cz);
+            const r1 = sk.addRing(r * 0.65, r * 0.65, h * 0.78, 16, sk.eOuter, cx, cz);
+            sk.connectRings(r0, r1, 16, 4, sk.eOuter);
+            sk.addRing(14, 14, h, 14, sk.eAccent, cx, cz);
+          });
+          return sk;
+        },
+        draw2D: () => {
+          const s1 = `<g transform="translate(0, 0)">` +
+            a4SheetFrame(0, 1, 2, '223', 'Coleção 5 Garrafas Minimalistas — Gabaritos Comparativos de Silhueta (Esc. 70%)', 4.5) +
+            [
+              { x: 42,  title: '#1 (252mm)', d: 'M -24 0 L 24 0 L 24 -124 L 11 -138 L 6 -176 L -6 -176 L -11 -138 L -24 -124 Z' },
+              { x: 98,  title: '#2 (182mm)', d: 'M -29 0 L 29 0 L 10 -106 L 17 -127 L -17 -127 L -10 -106 Z' },
+              { x: 152, title: '#3 (224mm)', d: 'M -23 0 L 23 0 L 23 -108 L 10 -129 L 17 -157 L -17 -157 L -10 -129 L -23 -108 Z' },
+              { x: 204, title: '#4 (178mm)', d: 'M -26 0 L 26 0 L 18 -110 L 6 -120 L 11 -125 L -11 -125 L -6 -120 L -18 -110 Z' },
+              { x: 256, title: '#5 (208mm)', d: 'M -22 0 L 22 0 L 20 -119 L 10 -129 L 15 -146 L -15 -146 L -10 -129 L -20 -119 Z' }
+            ].map(b => `<g transform="translate(${b.x}, 190)"><path d="${b.d}" fill="#f3eadc" stroke="#181615" stroke-width="0.9"/><text x="0" y="-44" text-anchor="middle" font-size="2.6" font-weight="700" fill="#181615">${b.title}</text></g>`).join('') +
+            `</g>`;
+          const s2 = `<g transform="translate(0, 225)">` +
+            a4SheetFrame(0, 2, 2, '223', 'Coleção 5 Garrafas — Fundos & Tabela de Planificação em Placas (1:1)', 4.5) +
+            drawAnnotatedDisk(58, 72, 34, { title: 'Fundo #1 Ø68', subtitle: 'P=214mm', wBevel: 4 }) +
+            drawAnnotatedDisk(146, 72, 42, { title: 'Fundo #2 Ø84', subtitle: 'Cone Puro', wBevel: 4 }) +
+            drawAnnotatedDisk(234, 72, 37, { title: 'Fundo #4 Ø74', subtitle: 'P=232mm', wBevel: 4 }) +
+            `<text x="148.5" y="152" text-anchor="middle" font-size="2.7" font-weight="700" fill="#2d6a4f">Construção em Placas: enrolar cada corpo sobre tubo PVC/papelão + soldar cone de ombro e gargalo no ponto de couro</text>` +
+            `</g>`;
+          return svgDefs() + filterSheetsSvg([s1, s2]);
+        }
+      },
+
+      {
+        id: '224', batch: 42, code: '224', shortName: 'Saleiro Quadrado c/ Colher',
+        name: '224. Saleiro / Açucareiro Quadrado Trapezoidal c/ Tampa Chanfrada & Colher (Lote 42 — 1 Folha A4 1:1)',
+        thicknessMm: 6.5, sheets: 1, defaultAcc: 'lid',
+        desc: 'Saleiro arquitetônico em placas (Base 86×86 → Topo 102×102 × H=88mm, E=6.5mm): 4 paredes trapezoidais levemente abertas, tampa quadrada plana (104×104×10mm) com recorte em chave na borda para passagem da colher inclinada.',
+        partsList: ['4× Paredes Trapezoidais (86→102×88mm, Bisel 45°)', '1× Fundo Quadrado 86×86mm', '1× Tampa Quadrada 104×104mm c/ Recorte Colher', '1× Colher 106mm'],
+        buildSolid: (g) => buildSquareSaltBoxSolid(g),
+        buildPlates: () => {
+          const sk = createSkeletonBuilder();
+          const exp = isExploded ? 26 : 0;
+          sk.addBoxWire(0, 44, 0, 94, 88, 94, 0, 0, sk.eOuter);
+          sk.addBoxWire(0, 93 + exp * 1.1, 0, 104, 10, 104, 0, 0, sk.eAccent);
+          return sk;
+        },
+        draw2D: () => {
+          const s1 = `<g transform="translate(0, 0)">` +
+            a4SheetFrame(0, 1, 1, '224', 'Saleiro Quadrado c/ Colher — Paredes (4×), Fundo & Tampa c/ Recorte (1:1)', 6.5) +
+            `<g transform="translate(76, 112)">` +
+              `<path d="M -43 0 L 43 0 L 51 -88 L -51 -88 Z" fill="#f3eadc" stroke="#181615" stroke-width="0.9"/>` +
+              `<text x="0" y="-44" text-anchor="middle" font-size="2.9" font-weight="700" fill="#181615">1. Parede Trapezoidal (4×)</text>` +
+              `<text x="0" y="-37" text-anchor="middle" font-size="2.3" fill="#9c422b">86→102 × 88mm • Bisel 45°</text>` +
+            `</g>` +
+            `<g transform="translate(212, 76)">` +
+              `<path d="M -52 -52 L 52 -52 L 52 -9 L 28 -9 A 10 10 0 1 0 28 9 L 52 9 L 52 52 L -52 52 Z" fill="#f3eadc" stroke="#181615" stroke-width="0.95"/>` +
+              `<text x="-6" y="-2" text-anchor="middle" font-size="2.9" font-weight="700" fill="#181615">2. Tampa 104×104mm (1:1)</text>` +
+              `<text x="-6" y="5" text-anchor="middle" font-size="2.3" fill="#c2593f">Recorte chave Ø20mm p/ Colher</text>` +
+            `</g>` +
+            drawAnnotatedRect(24, 124, 86, 72, { title: '3. Fundo Quadrado (86×86mm • esc. altura)', isHorizontal: true }) +
+            drawAnnotatedRect(148, 152, 106, 22, { title: '4. Colher Cerâmica/Madeira (106×22mm)', isHorizontal: true }) +
+            `</g>`;
+          return svgDefs() + s1;
+        }
+      },
+
+      {
+        id: '225', batch: 42, code: '225', shortName: 'Conjunto Moringa Geométrica',
+        name: '225. Conjunto Moringa Geométrica Brasileira em Terracota + 2 Copos Quadrados (Lote 42 — 2 Folhas A4 1:1)',
+        thicknessMm: 5.5, sheets: 2, defaultAcc: 'lid',
+        desc: 'Releitura geométrica em placas da moringa brasileira (126×126×H=238mm, E=5.5mm): corpo tronco-piramidal invertido, ombro piramidal truncado, pescoço quadrado e tampa piramidal com pino longo esmaltado + par de copos quadrados (72×72×82mm).',
+        partsList: [
+          'Moringa: 4× Paredes Corpo (76→126×124mm) + 4× Ombro (126→46×54mm) + 4× Pescoço (46→40×52mm) + Fundo',
+          'Tampa Piramidal: 4× Triângulos 48×34mm + Pino Quadrado 28×28×32mm',
+          '2× Copos Quadrados: 8× Paredes (58→72×78mm) + 2× Fundos 58×58mm'
+        ],
+        buildSolid: (g) => buildBrazilianMoringaSetSolid(g),
+        buildPlates: () => {
+          const sk = createSkeletonBuilder();
+          const exp = isExploded ? 26 : 0;
+          sk.addBoxWire(-46, 65, 0, 108, 120, 108, 0, 0, sk.eOuter);
+          sk.addBoxWire(-46, 188, 0, 44, 52, 44, 0, 0, sk.eOuter);
+          sk.addBoxWire(-46, 224 + exp * 1.4, 0, 48, 24, 48, 0, 0, sk.eAccent);
+          [[54, 42], [92, -32]].forEach(([cx, cz]) => sk.addBoxWire(cx, 41, cz, 68, 82, 68, 0, 0, sk.eAccent));
+          return sk;
+        },
+        draw2D: () => {
+          const drawTrap = (cx, yB, wB, wT, h, title) => {
+            const p = `M ${-wB / 2} 0 L ${wB / 2} 0 L ${wT / 2} ${-h} L ${-wT / 2} ${-h} Z`;
+            return `<g transform="translate(${cx}, ${yB})"><path d="${p}" fill="#f3eadc" stroke="#181615" stroke-width="0.9"/>` +
+              `<text x="0" y="${(-h / 2).toFixed(1)}" text-anchor="middle" font-size="2.7" font-weight="700" fill="#181615">${title}</text></g>`;
+          };
+          const s1 = `<g transform="translate(0, 0)">` +
+            a4SheetFrame(0, 1, 2, '225', 'Moringa Geométrica — Paredes do Corpo (4×), Ombro (4×) & Pescoço (4×) 1:1', 5.5) +
+            drawTrap(82, 152, 76, 126, 124, '1. Corpo Moringa (4× • 76→126×124)') +
+            drawTrap(218, 86, 126, 46, 54, '2. Ombro Pirâmide (4× • 126→46×54)') +
+            drawTrap(218, 168, 46, 40, 52, '3. Pescoço (4× • 46→40×52)') +
+            `</g>`;
+          const s2 = `<g transform="translate(0, 225)">` +
+            a4SheetFrame(0, 2, 2, '225', 'Moringa Geométrica — Fundo, Tampa Piramidal & Molde dos 2 Copos (1:1)', 5.0) +
+            drawAnnotatedRect(20, 28, 76, 76, { title: '4. Fundo Moringa (76×76)', isHorizontal: true }) +
+            drawTrap(158, 104, 58, 72, 78, '5. Parede Copo (8× p/ 2 Copos)') +
+            drawAnnotatedRect(216, 28, 58, 58, { title: '6. Fundo Copo (2×)', isHorizontal: true }) +
+            `<g transform="translate(76, 178)">` +
+              `<path d="M -24 0 L 24 0 L 0 -34 Z" fill="#f3eadc" stroke="#c2593f" stroke-width="0.9"/>` +
+              `<text x="0" y="10" text-anchor="middle" font-size="2.6" font-weight="700" fill="#181615">7. Face Tampa Pirâmide (4× • 48×34mm)</text>` +
+            `</g>` +
+            drawAnnotatedRect(156, 146, 112, 32, { title: '8. Pino Tampa (4× 28×32mm • Esmaltar)', bevelLeft: 4, bevelRight: 4 }) +
+            `</g>`;
+          return svgDefs() + filterSheetsSvg([s1, s2]);
+        }
+      }
     ];
 
     // =========================================================================
@@ -28477,7 +29034,8 @@
       38: { name: 'Lote 38 — Cone em Cruz, Cubo Vazado, 3 Tubos Oblíquos, Ânfora & Vaso Oval', label: 'Lote 38: Arquitetura & Formas', codes: '203, 204, 205, 206, 207' },
       39: { name: 'Lote 39 — Floreira Canelada, Vaso Curvo 4 Placas & Regador Diamante', label: 'Lote 39: Escultura & Jardim', codes: '208, 209, 210' },
       40: { name: 'Lote 40 — Conjunto Madar, Quarteto Galheteiros, Galheteiro Ergonômico, Conjunto Sizuku & Concha', label: 'Lote 40: Conjuntos & Mesa', codes: '211, 212, 213, 214, 215' },
-      41: { name: 'Lote 41 — Bandeja Monstera, Cantil 4 Alças, Saleiro+Colher & Duplas de Garrafas', label: 'Lote 41: Utilitários & Conjuntos', codes: '216, 217, 218, 219, 220' }
+      41: { name: 'Lote 41 — Bandeja Monstera, Cantil 4 Alças, Saleiro+Colher & Duplas de Garrafas', label: 'Lote 41: Utilitários & Conjuntos', codes: '216, 217, 218, 219, 220' },
+      42: { name: 'Lote 42 — Trio Neuralsip, Conjunto Bandeja 5pç, 5 Garrafas, Saleiro Quadrado & Moringa', label: 'Lote 42: Conjuntos & Moringa', codes: '221, 222, 223, 224, 225' }
     };
     let currentBatch = 1;
 
