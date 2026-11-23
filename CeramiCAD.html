@@ -308,7 +308,7 @@
       <!-- 4. Acabamento / Material -->
       <section class="pt-3 border-t border-white/10">
         <h2 class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2.5">Acabamento / Material</h2>
-        <div id="materials-list" class="grid grid-cols-1 gap-1.5"></div>
+        <div id="materials-list" class="grid grid-cols-2 gap-1.5"></div>
       </section>
 
     </div>
@@ -440,13 +440,19 @@
     };
 
     const MATERIAL_PRESETS = [
-      { id: 'terracotta', name: 'Terracota Original', swatch: '#c97e56', outer: 0xc97e56, inner: 0xb56b45, rough: 0.68, metal: 0.05, wire: false },
-      { id: 'sage',       name: 'Verde Sálvia',       swatch: '#a3b8a8', outer: 0xa3b8a8, inner: 0x879c8c, rough: 0.36, metal: 0.05, wire: false },
-      { id: 'sand',       name: 'Areia & Argila Crua',swatch: '#e3dacb', outer: 0xe3dacb, inner: 0xc8beae, rough: 0.55, metal: 0.03, wire: false },
-      { id: 'slate',      name: 'Ardósia Esmaltada',  swatch: '#4a5c6a', outer: 0x4a5c6a, inner: 0x394956, rough: 0.25, metal: 0.08, wire: false },
-      { id: 'technical',  name: 'Modo Técnico',       swatch: 'linear-gradient(135deg,#1f2937 50%,#38bdf8 50%)', outer: 0x38bdf8, inner: 0x0ea5e9, rough: 0.5, metal: 0.1, wire: true }
+      { id: 'celadon',    name: 'Celadon Imperial',       swatch: '#88b39a', outer: 0x88b39a, inner: 0x739c84, rough: 0.14, metal: 0.10, wire: false },
+      { id: 'tenmoku',    name: 'Tenmoku Ferro',          swatch: '#231c19', outer: 0x231c19, inner: 0x4a3222, rough: 0.20, metal: 0.26, wire: false },
+      { id: 'chun',       name: 'Chun Blue Song',         swatch: '#5f8299', outer: 0x5f8299, inner: 0x4d697c, rough: 0.22, metal: 0.08, wire: false },
+      { id: 'oribe',      name: 'Oribe Verde Cobre',      swatch: '#2c5e43', outer: 0x2c5e43, inner: 0x204531, rough: 0.16, metal: 0.10, wire: false },
+      { id: 'shino',      name: 'Shino Neve & Sal',       swatch: '#ece4d8', outer: 0xece4d8, inner: 0xd2c2ac, rough: 0.46, metal: 0.02, wire: false },
+      { id: 'bronze',     name: 'Bronze Manganês',        swatch: '#423a35', outer: 0x423a35, inner: 0x2e2723, rough: 0.30, metal: 0.48, wire: false },
+      { id: 'cobalt',     name: 'Azul Cobalto Real',      swatch: '#1e3a5f', outer: 0x1e3a5f, inner: 0x162c48, rough: 0.15, metal: 0.10, wire: false },
+      { id: 'basalt',     name: 'Basalto Vulcânico',      swatch: '#2a2b2e', outer: 0x2a2b2e, inner: 0x1f2022, rough: 0.68, metal: 0.05, wire: false },
+      { id: 'mustard',    name: 'Mostarda Craquelé',      swatch: '#d4a359', outer: 0xd4a359, inner: 0xb88840, rough: 0.32, metal: 0.06, wire: false },
+      { id: 'terracotta', name: 'Terracota & Cera',       swatch: '#c97e56', outer: 0xc97e56, inner: 0xb56b45, rough: 0.70, metal: 0.03, wire: false },
+      { id: 'technical',  name: 'Modo Técnico',           swatch: 'linear-gradient(135deg,#1f2937 50%,#38bdf8 50%)', outer: 0x38bdf8, inner: 0x0ea5e9, rough: 0.50, metal: 0.10, wire: true }
     ];
-    let currentMaterialId = 'terracotta';
+    let currentMaterialId = 'celadon';
 
     const clayOuterMat = new THREE.MeshStandardMaterial({
       color: 0xc97e56, roughness: 0.68, metalness: 0.05, side: THREE.DoubleSide
@@ -27410,15 +27416,16 @@
       MATERIAL_PRESETS.forEach(mat => {
         const isActive = mat.id === currentMaterialId;
         const btn = document.createElement('button');
-        btn.className = `flex items-center gap-2.5 px-2.5 py-2 rounded-xl border text-left transition-all ${
+        btn.title = mat.name;
+        btn.className = `flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-left transition-all ${
           isActive
-            ? 'bg-white/10 border-[#a3b8a8]/60 text-white'
+            ? 'bg-white/10 border-[#a3b8a8]/60 text-white shadow-sm ring-1 ring-[#a3b8a8]/30'
             : 'bg-white/[0.02] border-white/5 text-gray-300 hover:bg-white/[0.06]'
         }`;
         btn.innerHTML = `
-          <span class="w-4 h-4 rounded-full border border-white/20 shrink-0" style="background:${mat.swatch};"></span>
-          <span class="text-xs font-medium flex-1 truncate">${mat.name}</span>
-          ${isActive ? '<span class="w-1.5 h-1.5 rounded-full bg-[#a3b8a8]"></span>' : ''}
+          <span class="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0" style="background:${mat.swatch};"></span>
+          <span class="text-[11px] font-medium flex-1 truncate">${mat.name}</span>
+          ${isActive ? '<span class="w-1.5 h-1.5 rounded-full bg-[#a3b8a8] shrink-0"></span>' : ''}
         `;
         btn.addEventListener('click', () => {
           currentMaterialId = mat.id;
