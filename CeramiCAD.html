@@ -4707,18 +4707,31 @@
       addMeshWithEdges(g, new THREE.BoxGeometry(68, 6, 56), darkDipMat, [0, 3 - exp * 0.3, 0]);
     }
 
-    // 210: Regador Diamante Facetado c/ Alça Anelar Superior & Bico Longo Chanfrado
+    // 210: Regador Diamante Facetado c/ Pequenos Losangos Laterais na Cintura, Alça Anelar & Bico Longo
     function buildDiamondWateringCanSolid(g) {
-      const exp = isExploded ? 24 : 0;
+      const exp = isExploded ? 22 : 0;
       const tH = getAccT('handle');
       const tS = getAccT('spout');
       const sageMat = new THREE.MeshStandardMaterial({ color: 0x799e92, roughness: 0.34, metalness: 0.08, side: THREE.DoubleSide });
+      const lozengeMat = new THREE.MeshStandardMaterial({ color: 0x6f9488, roughness: 0.30, metalness: 0.10, side: THREE.DoubleSide });
       const handleMat = selectedAccessoryId === 'handle' ? claySelectedMat : sageMat;
       const spoutMat = selectedAccessoryId === 'spout' ? claySelectedMat : sageMat;
 
-      const n = 10, th = 5.0; // 10 faces diamante simétricas
-      const rBot = 40, rMid = 84, rTop = 28;
-      const yMid = 48, yTop = 128;
+      // Geometria exata coplanar (todas as 30 faces 100% planas: diedro = 0.000°):
+      // 10× Faces Superiores (pentágono escudo), 10× Pequenos Losangos Laterais na cintura, 10× Faces Inferiores
+      const n = 10, th = 5.0;
+      const c = Math.cos(Math.PI / n);
+      const rTop = 28.0, yTop = 130.0;
+      const rMid = 84.0, yMid = 48.0;
+      const rBot = 42.0, yBot = th;
+      const yHi = 62.0;
+      const rHi = (rTop * c + (rMid - rTop * c) * (yTop - yHi) / (yTop - yMid)) / c; // 78.02
+      const m1 = (rHi - rMid * c) / (yHi - yMid);
+      const b1 = rMid * c - m1 * yMid;
+      const m2 = (rMid - rBot * c) / (c * (yMid - yBot));
+      const b2 = rBot - m2 * yBot;
+      const yLow = (b2 - b1) / (m1 - m2); // 41.03
+      const rLow = m1 * yLow + b1;        // 80.82
 
       const getRing = (r, y, phase = 0, rOff = 0) => Array.from({ length: n }, (_, i) => {
         const a = (i / n) * Math.PI * 2 + phase;
@@ -4728,7 +4741,7 @@
 
       const maxF = isSectionCut ? Math.ceil(n / 2) : n;
 
-      // 1. Fundo Decagonal (1 placa)
+      // 1. Fundo Decagonal
       const bPts = getRing(rBot, 0);
       const bShape = new THREE.Shape();
       bShape.moveTo(bPts[0][0], -bPts[0][2]);
@@ -4736,52 +4749,76 @@
       bShape.closePath();
       const bGeo = new THREE.ExtrudeGeometry(bShape, { depth: th, bevelEnabled: false });
       bGeo.rotateX(-Math.PI / 2);
-      addMeshWithEdges(g, bGeo, sageMat, [0, -exp * 0.6, 0]);
+      addMeshWithEdges(g, bGeo, sageMat, [0, -exp * 0.45, 0]);
 
-      // 2. Função geradora de facetas individuais (10 placas inferiores + 10 placas superiores)
-      const addFacetPlates = (r0, y0, r1, y1, expDirY, isUpper) => {
-        const o0 = getRing(r0, y0, 0, 0), o1 = getRing(r1, y1, 0, 0);
-        const i0 = getRing(r0, y0, 0, -th), i1 = getRing(r1, y1, 0, -th);
-        for (let i = 0; i < maxF; i++) {
-          const j = (i + 1) % n;
-          const pos = [];
-          const pushQ = (a, b, c, d) => pos.push(...a, ...b, ...c, ...a, ...c, ...d);
-          pushQ(o0[i], o0[j], o1[j], o1[i]);
-          pushQ(i0[j], i0[i], i1[i], i1[j]);
-          pushQ(o1[i], o1[j], i1[j], i1[i]);
-          pushQ(o0[j], o0[i], i0[i], i0[j]);
-          pushQ(o0[i], o1[i], i1[i], i0[i]);
-          pushQ(o1[j], o0[j], i0[j], i1[j]);
+      const oTop = getRing(rTop, yTop, 0, 0),            iTop = getRing(rTop, yTop, 0, -th);
+      const oHi  = getRing(rHi,  yHi,  0, 0),            iHi  = getRing(rHi,  yHi,  0, -th);
+      const oMid = getRing(rMid, yMid, Math.PI / n, 0),  iMid = getRing(rMid, yMid, Math.PI / n, -th);
+      const oLow = getRing(rLow, yLow, 0, 0),            iLow = getRing(rLow, yLow, 0, -th);
+      const oBot = getRing(rBot, yBot, 0, 0),            iBot = getRing(rBot, yBot, 0, -th);
 
-          const geo = new THREE.BufferGeometry();
-          geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-          geo.computeVertexNormals();
+      const pushT = (arr, a, b, cc) => arr.push(...a, ...b, ...cc);
+      const pushQ = (arr, a, b, cc, d) => { pushT(arr, a, b, cc); pushT(arr, a, cc, d); };
+      const shiftY = (p, dy) => [p[0], p[1] + dy, p[2]];
 
-          const midA = ((i + 0.5) / n) * Math.PI * 2;
-          const ex = exp * Math.cos(midA) * 0.65;
-          const ez = exp * Math.sin(midA) * 0.65;
-          const ey = exp * expDirY;
+      // 2. 10× Faces Superiores (Pentágono Escudo: Top[i], Top[j], Hi[j], Mid[i], Hi[i])
+      const posUp = [];
+      const dyUp = exp * 0.55;
+      for (let i = 0; i < maxF; i++) {
+        const j = (i + 1) % n;
+        pushQ(posUp, shiftY(oHi[i], dyUp), shiftY(oHi[j], dyUp), shiftY(oTop[j], dyUp), shiftY(oTop[i], dyUp));
+        pushT(posUp, shiftY(oHi[i], dyUp), shiftY(oMid[i], dyUp), shiftY(oHi[j], dyUp));
+        pushQ(posUp, shiftY(iHi[j], dyUp), shiftY(iHi[i], dyUp), shiftY(iTop[i], dyUp), shiftY(iTop[j], dyUp));
+        pushT(posUp, shiftY(iHi[j], dyUp), shiftY(iMid[i], dyUp), shiftY(iHi[i], dyUp));
+        pushQ(posUp, shiftY(oTop[i], dyUp), shiftY(oTop[j], dyUp), shiftY(iTop[j], dyUp), shiftY(iTop[i], dyUp));
+      }
+      const geoUp = new THREE.BufferGeometry();
+      geoUp.setAttribute('position', new THREE.Float32BufferAttribute(posUp, 3));
+      geoUp.computeVertexNormals();
+      addMeshWithEdges(g, geoUp, sageMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 10);
 
-          addMeshWithEdges(g, geo, sageMat, [ex, ey, ez], [0, 0, 0], [1, 1, 1], 14);
-        }
-      };
+      // 3. 10× PEQUENOS LOSANGOS LATERAIS NA CINTURA (Hi[i], Mid[i], Low[i], Mid[i-1]) — 100% PLANOS!
+      const posLoz = [];
+      for (let i = 0; i < maxF; i++) {
+        const prev = (i - 1 + n) % n;
+        const aOut = (i / n) * Math.PI * 2;
+        const radExp = exp * 0.55;
+        const sP = (p) => [p[0] + Math.cos(aOut) * radExp, p[1], p[2] + Math.sin(aOut) * radExp];
+        pushQ(posLoz, sP(oHi[i]), sP(oMid[prev]), sP(oLow[i]), sP(oMid[i]));
+        pushQ(posLoz, sP(iHi[i]), sP(iMid[i]), sP(iLow[i]), sP(iMid[prev]));
+      }
+      const geoLoz = new THREE.BufferGeometry();
+      geoLoz.setAttribute('position', new THREE.Float32BufferAttribute(posLoz, 3));
+      geoLoz.computeVertexNormals();
+      addMeshWithEdges(g, geoLoz, lozengeMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 10);
 
-      // 10 Placas Inferiores + 10 Placas Superiores
-      addFacetPlates(rBot, th, rMid, yMid, -0.25, false);
-      addFacetPlates(rMid, yMid, rTop, yTop, 0.45, true);
+      // 4. 10× Faces Inferiores (Pentágono Invertido: Mid[i], Low[j], Bot[j], Bot[i], Low[i])
+      const posDown = [];
+      const dyDn = -exp * 0.25;
+      for (let i = 0; i < maxF; i++) {
+        const j = (i + 1) % n;
+        pushQ(posDown, shiftY(oBot[i], dyDn), shiftY(oBot[j], dyDn), shiftY(oLow[j], dyDn), shiftY(oLow[i], dyDn));
+        pushT(posDown, shiftY(oLow[i], dyDn), shiftY(oLow[j], dyDn), shiftY(oMid[i], dyDn));
+        pushQ(posDown, shiftY(iBot[j], dyDn), shiftY(iBot[i], dyDn), shiftY(iLow[i], dyDn), shiftY(iLow[j], dyDn));
+        pushT(posDown, shiftY(iLow[j], dyDn), shiftY(iLow[i], dyDn), shiftY(iMid[i], dyDn));
+      }
+      const geoDown = new THREE.BufferGeometry();
+      geoDown.setAttribute('position', new THREE.Float32BufferAttribute(posDown, 3));
+      geoDown.computeVertexNormals();
+      addMeshWithEdges(g, geoDown, sageMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 10);
 
-      // 3. Alça Anelar Grande Superior (Ø116mm)
+      // 5. Alça Anelar Grande Superior (TorusGeometry Ø116mm envolvendo o ombro do regador)
       const hRing = new THREE.TorusGeometry(58, 7.2, 16, 48, Math.PI * 1.48);
       addMeshWithEdges(g, hRing, handleMat,
-        [0, 152 + exp * 1.2 + (tH.height || 0), (tH.offset || 0)],
+        [0, 152 + exp * 1.1 + (tH.height || 0), (tH.offset || 0)],
         [0, ((tH.angle || 0) * Math.PI) / 180, -Math.PI * 0.24],
         [1, 1, 1], 28, 'handle'
       );
 
-      // 4. Bico Longo Oco Chanfrado saindo da cintura (+X a 44°)
+      // 6. Bico Longo Oco Chanfrado saindo da cintura (+X a 44°)
       const spoutGeo = buildHollowTubeGeo(10.5, 6.2, 128, 2.8, 20);
       addMeshWithEdges(g, spoutGeo, spoutMat,
-        [104 + exp * 1.2 + (tS.offset || 0), 106 + (tS.height || 0), 0],
+        [104 + exp * 1.1 + (tS.offset || 0), 106 + (tS.height || 0), 0],
         [0, ((tS.angle || 0) * Math.PI) / 180, -Math.PI * 0.24],
         [1, 1, 1], 20, 'spout'
       );
@@ -26290,87 +26327,84 @@
 
       {
         id: '210', batch: 39, code: '210', shortName: 'Regador Diamante Facetado',
-        name: '210. Regador Geométrico Diamante Facetado c/ Alça Anelar & Bico Longo (Lote 39 — 5 Folhas A4 1:1 Real)',
-        thicknessMm: 5.0, sheets: 5, defaultAcc: 'spout',
-        desc: 'Regador escultural joia em placas cerâmicas facetadas (Ø168×H=210mm, E=5.0mm): corpo diamante de 10 faces inferiores + 10 faces superiores convergindo à boca decagonal Ø56mm, grande alça tubular circular Ø116mm e bico longo oco chanfrado a 44°.',
+        name: '210. Regador Diamante Facetado c/ 10 Losangos Laterais, Alça Anelar & Bico (Lote 39 — 2 Folhas A4 1:1)',
+        thicknessMm: 5.0, sheets: 2, defaultAcc: 'spout',
+        desc: 'Regador joia em placas facetadas 100% planas (Ø168×H=210mm, E=5.0mm): 10 faces superiores em escudo, 10 pequenos losangos laterais (51.9×21.2mm) na linha da cintura, 10 faces inferiores até a base decagonal Ø84mm, alça anelar circular (Ø116mm) e bico longo chanfrado.',
         partsList: [
-          'Folha A4 #1: 4× Faces Superiores Diamante 1:1 (Faces 01 a 04 • 51.9→17.3 × 97.7mm • Bisel 18°)',
-          'Folha A4 #2: 4× Faces Superiores Diamante 1:1 (Faces 05 a 08 • 51.9→17.3 × 97.7mm)',
-          'Folha A4 #3: 2× Faces Superiores (Faces 09 e 10) + Fundo Decagonal Ø80.0mm (Face 21)',
-          'Folha A4 #4: 10× Faces Inferiores Diamante 1:1 (Faces 11 a 20 • 24.7→51.9 × 61.5mm • Bisel 18°)',
-          'Folha A4 #5: Bico Longo Oco Cônico L=128mm (Face 22) + Alça Anelar Tubular Ø116mm (Face 23)'
+          'Folha A4 #1: 10× Faces Sup. Escudo (51.9→17.4×98mm) + 10× Pequenos Losangos Laterais (51.9×21.2mm) + 10× Faces Inf.',
+          'Folha A4 #2: Fundo Decagonal Ø84mm + Bico Longo Oco (L=128mm) + Alça Anelar Tubular (Ø116mm)'
         ],
         buildSolid: (g) => buildDiamondWateringCanSolid(g),
         buildPlates: () => {
           const sk = createSkeletonBuilder();
-          const exp = isExploded ? 24 : 0;
-          const r0 = sk.addRing(40, 40, 5 - exp * 0.6, 10, sk.eInner);
-          const r1 = sk.addRing(84, 84, 48, 10, sk.eOuter);
-          const r2 = sk.addRing(28, 28, 128 + exp * 0.45, 10, sk.eOuter);
-          sk.connectRings(r0, r1, 10, 1, sk.eOuter);
-          sk.connectRings(r1, r2, 10, 1, sk.eOuter);
-          sk.addRing(58, 8, 152 + exp * 1.2, 24, sk.eAccent);
-          sk.addBoxWire(104 + exp * 1.2, 106, 0, 96, 16, 16, 0.75, 0, sk.eAccent);
+          const exp = isExploded ? 22 : 0;
+          const n = 10;
+          const addPoly = (r, y, phase, target) => {
+            const st = sk.v.length;
+            for (let i = 0; i < n; i++) {
+              const a = (i / n) * Math.PI * 2 + phase;
+              sk.addPt(r * Math.cos(a), y, r * Math.sin(a));
+            }
+            for (let i = 0; i < n; i++) target.push([st + i, st + ((i + 1) % n)]);
+            return st;
+          };
+          const rBot = addPoly(42, 5, 0, sk.eInner);
+          const rLow = addPoly(80.82, 41.03, 0, sk.eOuter);
+          const rMid = addPoly(84, 48, Math.PI / n, sk.eAccent);
+          const rHi  = addPoly(78.02, 62, 0, sk.eOuter);
+          const rTop = addPoly(28, 130 + exp * 0.4, 0, sk.eOuter);
+          sk.connectRings(rBot, rLow, n, 1, sk.eOuter);
+          sk.connectRings(rHi, rTop, n, 1, sk.eOuter);
+          for (let i = 0; i < n; i++) {
+            const prev = (i - 1 + n) % n;
+            sk.eAccent.push([rHi + i, rMid + i], [rHi + i, rMid + prev], [rLow + i, rMid + i], [rLow + i, rMid + prev]);
+          }
+          sk.addRing(58, 8, 152 + exp * 1.1, 20, sk.eAccent);
+          sk.addBoxWire(104 + exp * 1.1, 106, 0, 96, 16, 16, 0.75, 0, sk.eAccent);
           return sk;
         },
         draw2D: () => {
-          const drawFacet = (cx, cy, wB, wT, h, label, sub) => {
-            const hwB = wB / 2, hwT = wT / 2, hh = h / 2;
-            const p = `M ${(cx - hwB).toFixed(1)} ${(cy + hh).toFixed(1)} L ${(cx + hwB).toFixed(1)} ${(cy + hh).toFixed(1)} L ${(cx + hwT).toFixed(1)} ${(cy - hh).toFixed(1)} L ${(cx - hwT).toFixed(1)} ${(cy - hh).toFixed(1)} Z`;
+          const drawShield = (cx, cy, wMid, wTop, hBody, hTip, label, inverted = false) => {
+            const y0 = cy - (hBody + hTip) / 2;
+            const p = !inverted
+              ? `M ${(cx - wTop / 2).toFixed(1)} ${y0.toFixed(1)} L ${(cx + wTop / 2).toFixed(1)} ${y0.toFixed(1)} L ${(cx + wMid / 2).toFixed(1)} ${(y0 + hBody).toFixed(1)} L ${cx.toFixed(1)} ${(y0 + hBody + hTip).toFixed(1)} L ${(cx - wMid / 2).toFixed(1)} ${(y0 + hBody).toFixed(1)} Z`
+              : `M ${cx.toFixed(1)} ${y0.toFixed(1)} L ${(cx + wMid / 2).toFixed(1)} ${(y0 + hTip).toFixed(1)} L ${(cx + wTop / 2).toFixed(1)} ${(y0 + hTip + hBody).toFixed(1)} L ${(cx - wTop / 2).toFixed(1)} ${(y0 + hTip + hBody).toFixed(1)} L ${(cx - wMid / 2).toFixed(1)} ${(y0 + hTip).toFixed(1)} Z`;
             return `<g><path d="${p}" fill="#f3eadc" stroke="#181615" stroke-width="0.85"/>` +
-              `<text x="${cx}" y="${cy - 3}" text-anchor="middle" font-size="2.7" font-weight="700" fill="#181615">${label}</text>` +
-              `<text x="${cx}" y="${cy + 2}" text-anchor="middle" font-size="2.1" fill="#9c422b">${sub || `${wB}→${wT}×${h}mm`}</text>` +
-              `<text x="${cx}" y="${cy + 6.5}" text-anchor="middle" font-size="1.9" fill="#786e64">Bisel 18° nas bordas</text></g>`;
+              `<text x="${cx}" y="${(cy + (inverted ? 5 : -2)).toFixed(1)}" text-anchor="middle" font-size="2.6" font-weight="700" fill="#181615">${label}</text>` +
+              `<text x="${cx}" y="${(cy + (inverted ? 9.5 : 3)).toFixed(1)}" text-anchor="middle" font-size="2.1" fill="#9c422b">${wMid.toFixed(0)}→${wTop.toFixed(0)}×${(hBody + hTip).toFixed(0)}mm</text></g>`;
           };
-
-          // Folha 1: 4 Faces Superiores (Faces 01 a 04) em fileira ampla e arejada
+          const drawLozenge = (cx, cy, w, h, label) => {
+            const p = `M ${cx} ${(cy - h / 2).toFixed(1)} L ${(cx + w / 2).toFixed(1)} ${cy} L ${cx} ${(cy + h / 2).toFixed(1)} L ${(cx - w / 2).toFixed(1)} ${cy} Z`;
+            return `<g><path d="${p}" fill="#e6f2ec" stroke="#c2593f" stroke-width="0.9"/>` +
+              `<text x="${cx}" y="${(cy + 1).toFixed(1)}" text-anchor="middle" font-size="2.4" font-weight="700" fill="#181615">${label}</text></g>`;
+          };
           const s1 = `<g transform="translate(0, 0)">` +
-            a4SheetFrame(0, 1, 5, '210', 'Regador Diamante — 4× Faces Superiores (Faces 01 a 04 de 10) 1:1 Real', 5.0) +
-            drawFacet(45, 110, 51.9, 17.3, 97.7, 'Face Sup. #01') +
-            drawFacet(114, 110, 51.9, 17.3, 97.7, 'Face Sup. #02') +
-            drawFacet(183, 110, 51.9, 17.3, 97.7, 'Face Sup. #03') +
-            drawFacet(252, 110, 51.9, 17.3, 97.7, 'Face Sup. #04') +
+            a4SheetFrame(0, 1, 2, '210', 'Regador Diamante — 10× Escudos Sup., 10× Losangos Laterais & 10× Inf. (1:1)', 5.0) +
+            drawShield(56, 74, 48.2, 17.4, 84, 15, '1. Escudo Sup. (10×)', false) +
+            drawShield(124, 74, 48.2, 17.4, 84, 15, '1B. Cópia Ref.', false) +
+            drawLozenge(216, 48, 51.9, 21.2, '2. Losango Lateral 51.9×21.2 (10×)') +
+            drawLozenge(216, 78, 51.9, 21.2, '2B. Cópia Ref. (1:1)') +
+            drawLozenge(216, 108, 51.9, 21.2, '2C. Cópia Ref. (1:1)') +
+            drawShield(68, 160, 50.0, 26.0, 48, 8, '3. Escudo Inf. (10×)', true) +
+            drawShield(148, 160, 50.0, 26.0, 48, 8, '3B. Cópia Ref.', true) +
+            `<text x="232" y="156" text-anchor="middle" font-size="2.4" font-weight="700" fill="#2d6a4f">Todas as 30 placas são 100% planas</text>` +
+            `<text x="232" y="164" text-anchor="middle" font-size="2.2" fill="#3d3531">Os 10 losangos travam exatamente</text>` +
+            `<text x="232" y="171" text-anchor="middle" font-size="2.2" fill="#3d3531">entre as pontas em V da cintura</text>` +
             `</g>`;
-
-          // Folha 2: 4 Faces Superiores (Faces 05 a 08)
           const s2 = `<g transform="translate(0, 225)">` +
-            a4SheetFrame(0, 2, 5, '210', 'Regador Diamante — 4× Faces Superiores (Faces 05 a 08 de 10) 1:1 Real', 5.0) +
-            drawFacet(45, 110, 51.9, 17.3, 97.7, 'Face Sup. #05') +
-            drawFacet(114, 110, 51.9, 17.3, 97.7, 'Face Sup. #06') +
-            drawFacet(183, 110, 51.9, 17.3, 97.7, 'Face Sup. #07') +
-            drawFacet(252, 110, 51.9, 17.3, 97.7, 'Face Sup. #08') +
-            `</g>`;
-
-          // Folha 3: 2 Faces Superiores (Faces 09 e 10) + Fundo Decagonal Ø80mm (Face 21)
-          const s3 = `<g transform="translate(0, 450)">` +
-            a4SheetFrame(0, 3, 5, '210', 'Regador Diamante — 2× Faces Superiores (09 e 10) & Fundo Decagonal 1:1', 5.0) +
-            drawFacet(60, 110, 51.9, 17.3, 97.7, 'Face Sup. #09') +
-            drawFacet(140, 110, 51.9, 17.3, 97.7, 'Face Sup. #10') +
-            drawAnnotatedDisk(230, 110, 40, { title: 'Face #21: Fundo Decagonal', subtitle: 'Ø80.0mm • Lado 24.7 • Bisel 45°', wBevel: 4.5 }) +
-            `</g>`;
-
-          // Folha 4: Todas as 10 Faces Inferiores (Faces 11 a 20) em 2 fileiras de 5
-          const s4 = `<g transform="translate(0, 675)">` +
-            a4SheetFrame(0, 4, 5, '210', 'Regador Diamante — 10× Faces Inferiores (Faces 11 a 20) 1:1 Real', 5.0) +
-            [35, 92, 149, 206, 263].map((cx, i) => drawFacet(cx, 66, 24.7, 51.9, 61.5, `Face Inf. #${11 + i}`, '24.7→51.9×61.5')).join('') +
-            [35, 92, 149, 206, 263].map((cx, i) => drawFacet(cx, 154, 24.7, 51.9, 61.5, `Face Inf. #${16 + i}`, '24.7→51.9×61.5')).join('') +
-            `</g>`;
-
-          // Folha 5: Bico Longo Oco Cônico (Face 22) + Alça Anelar Tubular Ø116mm (Face 23)
-          const s5 = `<g transform="translate(0, 900)">` +
-            a4SheetFrame(0, 5, 5, '210', 'Regador Diamante — Bico Longo Oco Cônico & Alça Anelar (1:1 Real)', 5.0) +
-            `<g transform="translate(148.5, 50)">` +
-              `<path d="M -64 -18 L 64 -12 L 64 12 L -64 18 Z" fill="#f3eadc" stroke="#181615" stroke-width="0.85"/>` +
-              `<text x="0" y="-2" text-anchor="middle" font-size="2.9" font-weight="700" fill="#181615">Face #22: Bico Longo Oco Cônico (1:1 • L=128mm)</text>` +
-              `<text x="0" y="5" text-anchor="middle" font-size="2.3" fill="#9c422b">Base Ø21.0mm → Ponta Ø12.4mm • Parede E=2.8mm • Chanfro 44°</text>` +
+            a4SheetFrame(0, 2, 2, '210', 'Regador Diamante — Fundo Decagonal Ø84mm, Bico Longo & Alça Anelar (1:1)', 5.0) +
+            drawAnnotatedDisk(66, 76, 42, { title: '4. Fundo 10 Lados', subtitle: 'Ø84.0mm • Lado 26.0', wBevel: 4.5 }) +
+            `<g transform="translate(192, 68)">` +
+              `<path d="M -64 -26 L 64 -16 L 64 16 L -64 26 Z" fill="#f3eadc" stroke="#181615" stroke-width="0.85"/>` +
+              `<text x="0" y="-1" text-anchor="middle" font-size="2.9" font-weight="700" fill="#181615">5. Bico Longo Oco (1:1 • L=128mm)</text>` +
+              `<text x="0" y="5" text-anchor="middle" font-size="2.3" fill="#9c422b">Base Ø21→Ponta Ø12.4mm • E=2.8mm</text>` +
             `</g>` +
-            `<g transform="translate(148.5, 162)">` +
+            `<g transform="translate(148.5, 164)">` +
               `<path d="M -52 14 A 58 58 0 1 1 52 14" fill="none" stroke="#181615" stroke-width="14.5" stroke-linecap="round"/>` +
               `<path d="M -52 14 A 58 58 0 1 1 52 14" fill="none" stroke="#f3eadc" stroke-width="12" stroke-linecap="round"/>` +
-              `<text x="0" y="14" text-anchor="middle" font-size="2.8" font-weight="700" fill="#181615">Face #23: Alça Anelar Ø116mm (Rolo Maciço Ø14.5 × Comp. 270mm)</text>` +
+              `<text x="0" y="14" text-anchor="middle" font-size="2.8" font-weight="700" fill="#181615">6. Alça Anelar Ø116mm (Rolo Ø14.5 × Comp. 270mm)</text>` +
             `</g></g>`;
-
-          return svgDefs() + filterSheetsSvg([s1, s2, s3, s4, s5]);
+          return svgDefs() + filterSheetsSvg([s1, s2]);
         }
       },
 
