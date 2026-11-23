@@ -4824,6 +4824,394 @@
       );
     }
 
+    // =========================================================================
+    // MOTOR GEOMÉTRICO DO LOTE 40 — 3 CONJUNTOS COMPLETOS + 2 PEÇAS AUTORAIS
+    // =========================================================================
+    // 211: CONJUNTO MADAR (Dupla de Garrafas Cinza Grafite c/ Medalhões em Anel & Rolhas de Madeira)
+    function buildMadarSetSolid(g) {
+      const exp = isExploded ? 24 : 0;
+      const tL = getAccT('lid');
+      const slateMat = new THREE.MeshStandardMaterial({ color: 0x5d5e60, roughness: 0.76, metalness: 0.08, side: THREE.DoubleSide });
+      const ringWoodMat = new THREE.MeshStandardMaterial({ color: 0xe3bd91, roughness: 0.36, metalness: 0.06, side: THREE.DoubleSide });
+      const stopperMat = selectedAccessoryId === 'lid'
+        ? claySelectedMat
+        : new THREE.MeshStandardMaterial({ color: 0x9c5a2d, roughness: 0.28, metalness: 0.12 });
+      const stripeMat = new THREE.MeshStandardMaterial({ color: 0xdeb27c, roughness: 0.32 });
+
+      const buildOneMadar = (cx, rBody, neckH, neckR, ringR, ringAngleY) => {
+        const grp = new THREE.Group();
+        grp.position.set(cx, 0, 0);
+
+        // 1. Corpo esférico achatado na base + gargalo fino c/ lábio revirado (revolução com espessura real)
+        const pts = [];
+        const baseFlatR = rBody * 0.44;
+        const bodyCenterY = rBody * 0.88;
+        pts.push([baseFlatR, 0]);
+        for (let i = 1; i <= 14; i++) {
+          const a = -Math.PI * 0.36 + (i / 14) * (Math.PI * 0.80); // arco esférico
+          const r = Math.max(neckR, rBody * Math.cos(a));
+          const y = bodyCenterY + rBody * Math.sin(a);
+          if (y > 2) pts.push([r, y]);
+        }
+        const yNeckBase = bodyCenterY + rBody * 0.94;
+        pts.push([neckR + 3.5, yNeckBase + 8]);
+        pts.push([neckR, yNeckBase + 18]);
+        pts.push([neckR * 0.96, yNeckBase + neckH - 4]);
+        pts.push([neckR + 3.2, yNeckBase + neckH]); // pequeno lábio saliente no topo do gargalo
+
+        const prof = buildVesselCrossSection(pts, 4.8, 5.5);
+        addMeshWithEdges(grp, buildThickRevolvedProfile(prof, 44), slateMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 24);
+
+        // 2. Medalhão Circular em Anel de Madeira/Argila Clara embutido no bojo + disco cinza interno
+        const medGrp = new THREE.Group();
+        medGrp.position.set(0, bodyCenterY, 0);
+        medGrp.rotation.y = ringAngleY;
+        const zMed = Math.sqrt(Math.max(10, rBody * rBody - ringR * ringR)) + 1.5;
+
+        const torusRing = new THREE.Mesh(new THREE.TorusGeometry(ringR, 4.6, 14, 36), ringWoodMat);
+        torusRing.position.set(0, 0, zMed + exp * 0.45);
+        medGrp.add(torusRing);
+
+        // Disco interno cinza nivelado dentro do anel
+        const innerDisk = new THREE.Mesh(new THREE.CylinderGeometry(ringR - 3.6, ringR - 3.6, 4.0, 32), slateMat);
+        innerDisk.rotation.x = Math.PI / 2;
+        innerDisk.position.set(0, 0, zMed - 0.5 + exp * 0.25);
+        medGrp.add(innerDisk);
+        grp.add(medGrp);
+
+        // 3. Rolha Esférica de Madeira Rajada encaixada na boca (clicável!)
+        const yTop = yNeckBase + neckH;
+        const stGrp = new THREE.Group();
+        stGrp.position.set(0, yTop + 8 + exp * 1.1 + (tL.height || 0), (tL.offset || 0));
+        stGrp.rotation.y = ((tL.angle || 0) * Math.PI) / 180;
+
+        const ballR = neckR * 0.92;
+        const ball = new THREE.Mesh(new THREE.SphereGeometry(ballR, 20, 16), stopperMat);
+        ball.userData.accessoryType = 'lid';
+        stGrp.add(ball);
+        // Faixa clara simulando veio de madeira torneada
+        const band = new THREE.Mesh(new THREE.CylinderGeometry(ballR * 1.01, ballR * 1.01, 2.8, 20), stripeMat);
+        band.position.y = 1.5;
+        band.userData.accessoryType = 'lid';
+        stGrp.add(band);
+        // Pino de encaixe da rolha
+        const plug = new THREE.Mesh(new THREE.CylinderGeometry(neckR - 5.2, neckR - 6.0, 14, 16), stopperMat);
+        plug.position.y = -ballR - 4;
+        plug.userData.accessoryType = 'lid';
+        stGrp.add(plug);
+
+        grp.add(stGrp);
+        g.add(grp);
+      };
+
+      // Garrafa Alta à esquerda (medalhão virado 48° para a direita, como na foto!)
+      buildOneMadar(-76 - exp * 0.4, 65, 118, 12.5, 30, Math.PI * 0.30);
+      // Garrafa Baixa à direita (medalhão frontal!)
+      buildOneMadar(72 + exp * 0.4, 54, 34, 11.5, 25, 0);
+    }
+
+    // 212: CONJUNTO QUARTETO DE GALHETEIROS (4 Peças c/ Bico, Alça Circular & Rolha de Cortiça)
+    function buildCruetQuartetSolid(g) {
+      const exp = isExploded ? 22 : 0;
+      const tL = getAccT('lid');
+      const tH = getAccT('handle');
+      const corkMat = selectedAccessoryId === 'lid'
+        ? claySelectedMat
+        : new THREE.MeshStandardMaterial({ color: 0xb08354, roughness: 0.92, metalness: 0.02 });
+
+      const styles = [
+        { x: -120, color: 0x6f7d3a, rough: 0.26, rawFoot: false }, // 1. Verde oliva brilhante
+        { x: -40,  color: 0xf0ede6, rough: 0.34, rawFoot: false }, // 2. Branco creme salpicado
+        { x: 40,   color: 0xe3cca8, rough: 0.52, rawFoot: true  }, // 3. Areia c/ base terracota crua
+        { x: 120,  color: 0x828c88, rough: 0.58, rawFoot: false }  // 4. Cinza craquelado
+      ];
+
+      styles.forEach((st, idx) => {
+        const grp = new THREE.Group();
+        grp.position.set(st.x + (idx - 1.5) * exp * 0.45, 0, 0);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: st.color, roughness: st.rough, metalness: 0.04, side: THREE.DoubleSide });
+        const rawMat = new THREE.MeshStandardMaterial({ color: 0xa68362, roughness: 0.85, side: THREE.DoubleSide });
+        const handleMat = selectedAccessoryId === 'handle' ? claySelectedMat : bodyMat;
+
+        // 1. Corpo cilíndrico (Ø72×86) -> ombro arredondado -> gargalo (Ø30×38)
+        const wallPts = [
+          [35, 0], [36, 82], [32, 94], [18, 108], [15, 134], [18, 144]
+        ];
+        const prof = buildVesselCrossSection(wallPts, 4.5, 5.0);
+        addMeshWithEdges(grp, buildThickRevolvedProfile(prof, 36), bodyMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 22);
+
+        // Faixa de base crua no 3º galheteiro (fiel à foto)
+        if (st.rawFoot) {
+          addMeshWithEdges(grp, buildHollowCylinder(36.4, 35.4, 24, 36), rawMat, [0, 0, 0]);
+        }
+
+        // 2. Bico Vertedor Discreto à esquerda (-X) na boca (y=142)
+        const spoutGeo = new THREE.ConeGeometry(7.5, 16, 12, 1, true, 0, Math.PI);
+        const sp = new THREE.Mesh(spoutGeo, bodyMat);
+        sp.position.set(-18, 141, 0);
+        sp.rotation.z = Math.PI * 0.42;
+        sp.rotation.y = Math.PI * 0.5;
+        grp.add(sp);
+
+        // 3. Alça Circular em Anel à direita (+X) no pescoço (y=124, R=15mm)
+        const ringGeo = new THREE.TorusGeometry(15, 3.8, 12, 24);
+        addMeshWithEdges(grp, ringGeo, handleMat, [26 + (tH.offset || 0), 124 + (tH.height || 0), 0], [0, ((tH.angle || 0) * Math.PI) / 180, 0], [1, 1, 1], 24, 'handle');
+
+        // 4. Rolha Cônica de Cortiça na boca (y=144..160)
+        const corkGeo = new THREE.CylinderGeometry(11.5, 9.2, 22, 20);
+        addMeshWithEdges(grp, corkGeo, corkMat, [0, 148 + exp * 1.1 + (tL.height || 0), (tL.offset || 0)], [0, ((tL.angle || 0) * Math.PI) / 180, 0], [1, 1, 1], 22, 'lid');
+
+        g.add(grp);
+      });
+    }
+
+    // 213: Galheteiro / Jarra de Azeite Cônica c/ Bico Oblíquo Alongado & Cavidade Ergonômica de Polegar
+    function buildOliveCruetSolid(g) {
+      const oliveMat = new THREE.MeshStandardMaterial({ color: 0x5c6934, roughness: 0.22, metalness: 0.10, side: THREE.DoubleSide });
+      const footMat = new THREE.MeshStandardMaterial({ color: 0xa6896c, roughness: 0.85, side: THREE.DoubleSide });
+
+      const rings = 32, segs = isSectionCut ? 24 : 48, maxA = isSectionCut ? Math.PI : Math.PI * 2;
+      const th = 5.0, H = 165;
+
+      const getPt = (u, v, rOff = 0) => {
+        // Perfil tronco-cônico suave: base r=36 -> bojo baixo r=41 (v=0.14) -> pescoço r=25 (v=0.82) -> boca r=26 (v=1.0)
+        let r = 36 + 5 * Math.sin(Math.min(1, v / 0.25) * Math.PI * 0.5);
+        if (v > 0.15) {
+          const t = (v - 0.15) / 0.85;
+          r = 41 - 16 * Math.pow(t, 0.85);
+        }
+
+        // Bico alongado oblíquo em u = PI (-X, apontando para a esquerda como na foto!)
+        const spoutFactor = Math.pow(Math.max(0, -Math.cos(u)), 4.0);
+        const topRamp = Math.pow(Math.max(0, (v - 0.65) / 0.35), 1.6);
+        const rSpout = 18.0 * spoutFactor * topRamp;
+        const ySpout = 36.0 * Math.pow(Math.max(0, (1 - Math.cos(u)) * 0.5), 1.4) * Math.pow(v, 2.2);
+
+        // Cavidade ergonômica côncava para o polegar em u = 0 (+X, lado oposto ao bico), centrada em v = 0.56!
+        const du = Math.atan2(Math.sin(u), Math.cos(u)); // distância angular de u=0
+        const dv = (v - 0.56) / 0.18;
+        const d2 = (du / 0.62) * (du / 0.62) + dv * dv;
+        const dimple = d2 < 1.0 ? (-11.5 * Math.pow(1 - d2, 1.5)) : 0;
+
+        const rr = Math.max(8, r + rSpout + dimple + rOff);
+        return [rr * Math.cos(u), 8 + v * (H - 8) + ySpout, rr * Math.sin(u)];
+      };
+
+      const pos = [];
+      const pushQ = (a, b, c, d) => pos.push(...a, ...b, ...c, ...a, ...c, ...d);
+      for (let rv = 0; rv < rings; rv++) {
+        const v0 = rv / rings, v1 = (rv + 1) / rings;
+        for (let s = 0; s < segs; s++) {
+          const u0 = (s / segs) * maxA, u1 = ((s + 1) / segs) * maxA;
+          const o00 = getPt(u0, v0, 0), o10 = getPt(u1, v0, 0), o11 = getPt(u1, v1, 0), o01 = getPt(u0, v1, 0);
+          const i00 = getPt(u0, v0, -th), i10 = getPt(u1, v0, -th), i11 = getPt(u1, v1, -th), i01 = getPt(u0, v1, -th);
+          pushQ(o00, o10, o11, o01);
+          pushQ(i10, i00, i01, i11);
+          if (rv === rings - 1) pushQ(o01, o11, i11, i01);
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.computeVertexNormals();
+      addMeshWithEdges(g, geo, oliveMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 24);
+
+      // Base/pé em argila crua aparente (H=8mm)
+      addMeshWithEdges(g, new THREE.CylinderGeometry(36, 33, 8, 40), footMat, [0, 4, 0]);
+    }
+
+    // 214: CONJUNTO JAPONÊS "SIZUKU FORUMU" (Travessa Sinuosa 4 Módulos em S + Prato Leque c/ Molheira + Copo 4 Pés + Pratos Ovais)
+    function buildSizukuSetSolid(g) {
+      const exp = isExploded ? 20 : 0;
+      const tL = getAccT('lid');
+      const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf7f7f5, roughness: 0.22, metalness: 0.04, side: THREE.DoubleSide });
+      const blueAccentMat = new THREE.MeshStandardMaterial({ color: 0x3b5998, roughness: 0.35 });
+      const hashiMat = new THREE.MeshStandardMaterial({ color: 0x7a1f1f, roughness: 0.35 });
+      const sauceMat = selectedAccessoryId === 'lid' ? claySelectedMat : whiteMat;
+
+      // Helper para 1 módulo curvo da Travessa Sinuosa (arco de 90°, R_in=34, R_out=78, H=16mm)
+      const buildCurvedArcDish = (cx, cz, startAng, endAng, yLift = 0) => {
+        const grp = new THREE.Group();
+        grp.position.set(cx, yLift, cz);
+        const rIn = 34, rOut = 78, h = 16, th = 4.5;
+        const segs = 20;
+
+        // Fundo curvo
+        const bShape = new THREE.Shape();
+        bShape.absarc(0, 0, rOut, startAng, endAng, false);
+        bShape.absarc(0, 0, rIn, endAng, startAng, true);
+        bShape.closePath();
+        const bGeo = new THREE.ExtrudeGeometry(bShape, { depth: th, bevelEnabled: false, curveSegments: segs });
+        bGeo.rotateX(-Math.PI / 2);
+        addMeshWithEdges(grp, bGeo, whiteMat, [0, 0, 0]);
+
+        // Borda perimetral do módulo curvo (paredes curvas interna/externa + 2 topos retos)
+        const wShape = new THREE.Shape();
+        wShape.absarc(0, 0, rOut, startAng, endAng, false);
+        wShape.absarc(0, 0, rIn, endAng, startAng, true);
+        wShape.closePath();
+        const wHole = new THREE.Path();
+        const dA = 0.08;
+        wHole.absarc(0, 0, rOut - th, startAng + dA, endAng - dA, false);
+        wHole.absarc(0, 0, rIn + th, endAng - dA, startAng + dA, true);
+        wHole.closePath();
+        wShape.holes.push(wHole);
+        const wGeo = new THREE.ExtrudeGeometry(wShape, { depth: h - th, bevelEnabled: false, curveSegments: segs });
+        wGeo.rotateX(-Math.PI / 2);
+        addMeshWithEdges(grp, wGeo, whiteMat, [0, th, 0]);
+
+        // Faixas azuis decorativas sobre o fundo
+        for (const rStr of [46, 54, 62]) {
+          const stGeo = new THREE.RingGeometry(rStr - 1.0, rStr + 1.0, 20, 1, startAng + 0.1, (endAng - startAng) - 0.2);
+          stGeo.rotateX(-Math.PI / 2);
+          const sm = new THREE.Mesh(stGeo, blueAccentMat);
+          sm.position.y = th + 0.3;
+          grp.add(sm);
+        }
+        g.add(grp);
+      };
+
+      // 1. TRAVESSA SINUOSA EM S (4 módulos curvos de 90° em onda contínua ao longo do centro!)
+      // Raio médio R_m = 56mm -> centros alternam a cada 2*R_m = 112mm em X/Z para encaixe tangente perfeito!
+      buildCurvedArcDish(-112 - exp * 0.6, -24, -Math.PI * 0.5, 0, 0);          // Módulo 1 (curva esq)
+      buildCurvedArcDish(0 - exp * 0.2,    -24, Math.PI * 0.5, Math.PI, 0);    // Módulo 2 (arco superior)
+      buildCurvedArcDish(0 + exp * 0.2,    -136, -Math.PI * 0.5, 0, 0);        // Módulo 3 (arco inferior dir)
+      buildCurvedArcDish(112 + exp * 0.6,  -136, Math.PI * 0.5, Math.PI, 0);   // Módulo 4 (curva direita)
+
+      // 2. PRATO EM LEQUE (SETOR CIRCULAR) COM ENCAIXE FRONTAL PARA MOLHEIRA + HASHIS (na frente, z = +104)
+      const fanGrp = new THREE.Group();
+      fanGrp.position.set(0, 0, 108 + exp * 0.4);
+      const rFanOut = 112, rFanIn = 34, aSpan = Math.PI * 0.62;
+      const a0 = Math.PI * 0.5 - aSpan / 2, a1 = Math.PI * 0.5 + aSpan / 2;
+
+      const fanShape = new THREE.Shape();
+      fanShape.absarc(0, 0, rFanOut, a0, a1, false);
+      fanShape.absarc(0, 0, rFanIn, a1, a0, true);
+      fanShape.closePath();
+      const fanBaseGeo = new THREE.ExtrudeGeometry(fanShape, { depth: 4.5, bevelEnabled: false, curveSegments: 28 });
+      fanBaseGeo.rotateX(-Math.PI / 2);
+      addMeshWithEdges(fanGrp, fanBaseGeo, whiteMat, [0, 0, 0]);
+
+      // Borda elevada do prato em leque (H=14mm)
+      const fanRimShape = new THREE.Shape();
+      fanRimShape.absarc(0, 0, rFanOut, a0, a1, false);
+      fanRimShape.absarc(0, 0, rFanIn, a1, a0, true);
+      fanRimShape.closePath();
+      const fanHole = new THREE.Path();
+      fanHole.absarc(0, 0, rFanOut - 4.5, a0 + 0.05, a1 - 0.05, false);
+      fanHole.absarc(0, 0, rFanIn + 4.5, a1 - 0.05, a0 + 0.05, true);
+      fanHole.closePath();
+      fanRimShape.holes.push(fanHole);
+      const fanRimGeo = new THREE.ExtrudeGeometry(fanRimShape, { depth: 10, bevelEnabled: false, curveSegments: 28 });
+      fanRimGeo.rotateX(-Math.PI / 2);
+      addMeshWithEdges(fanGrp, fanRimGeo, whiteMat, [0, 4.5, 0]);
+      g.add(fanGrp);
+
+      // Molheira Circular encaixada exatamente no recorte semicircular (z = 108, R=30mm) + Apoio de Hashi (clicável!)
+      const sauceProf = buildVesselCrossSection([[22, 0], [30, 15]], 4.0, 4.5);
+      const sMesh = addMeshWithEdges(g, buildThickRevolvedProfile(sauceProf, 32), sauceMat,
+        [0, 0 + (tL.height || 0), 108 + exp * 1.1 + (tL.offset || 0)],
+        [0, ((tL.angle || 0) * Math.PI) / 180, 0], [1, 1, 1], 18, 'lid'
+      );
+      // Par de Hashis vermelhos descansando na frente da molheira
+      [-3, 3].forEach(hz => {
+        const stick = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 170, 10), hashiMat);
+        stick.rotation.z = Math.PI / 2;
+        stick.position.set(16, 4, 146 + hz + exp * 0.6);
+        g.add(stick);
+      });
+
+      // 3. COPO / TIGELA DE SAQUÊ OU MOLHO COM 4 PÉZINHOS ESFÉRICOS (no centro, z = +16)
+      const cupProf = buildVesselCrossSection([[18, 6], [28, 38]], 3.8, 4.5);
+      addMeshWithEdges(g, buildThickRevolvedProfile(cupProf, 32), whiteMat, [14, 0, 12]);
+      for (let k = 0; k < 4; k++) {
+        const pa = (k / 4) * Math.PI * 2 + Math.PI / 4;
+        const foot = new THREE.Mesh(new THREE.SphereGeometry(4.2, 12, 10), whiteMat);
+        foot.position.set(14 + 12 * Math.cos(pa), 4.0, 12 + 12 * Math.sin(pa));
+        g.add(foot);
+      }
+
+      // 4. PRATO OVAL COM 2 ORELHAS (ao fundo esq.) & PRATINHO OVAL PEQUENO (ao fundo)
+      const ovalProf = buildVesselCrossSection([[38, 0], [60, 16]], 4.5, 5.0);
+      addMeshWithEdges(g, buildThickRevolvedProfile(ovalProf, 36, { scaleX: 1.25, scaleZ: 0.85 }), whiteMat, [-94, 0, -118 - exp * 0.4]);
+      const smallOvalProf = buildVesselCrossSection([[20, 0], [32, 11]], 3.8, 4.0);
+      addMeshWithEdges(g, buildThickRevolvedProfile(smallOvalProf, 28, { scaleX: 1.2, scaleZ: 0.9 }), whiteMat, [-6, 0, -172 - exp * 0.5]);
+    }
+
+    // 215: Porta-Guardanapos Leque / Concha Art Déco de 7 Pétalas Bicolor
+    function buildShellNapkinSolid(g) {
+      const exp = isExploded ? 24 : 0;
+      const th = 6.5, gap = 36, baseW = 142;
+      const creamRimMat = new THREE.MeshStandardMaterial({ color: 0xeae0ce, roughness: 0.35, side: THREE.DoubleSide });
+      const sageMat = new THREE.MeshStandardMaterial({ color: 0x879976, roughness: 0.25, metalness: 0.06 });
+      const blueMat = new THREE.MeshStandardMaterial({ color: 0x8396ab, roughness: 0.25, metalness: 0.06 });
+      const paperMat = new THREE.MeshStandardMaterial({ color: 0xfaf7f2, roughness: 0.88 });
+
+      // 7 pétalas radiais em leque (ângulos de 12° a 168°, raios crescentes até o pico central H=96mm)
+      const petals = [
+        { ang: 162, r: 72, col: blueMat },
+        { ang: 138, r: 78, col: sageMat },
+        { ang: 114, r: 86, col: blueMat },
+        { ang: 90,  r: 96, col: sageMat }, // Pétala central mais alta!
+        { ang: 66,  r: 86, col: blueMat },
+        { ang: 42,  r: 78, col: sageMat },
+        { ang: 18,  r: 72, col: blueMat }
+      ];
+
+      // Contorno externo escalopado das 7 pétalas
+      const wallShape = new THREE.Shape();
+      wallShape.moveTo(-baseW / 2, 0);
+      wallShape.lineTo(baseW / 2, 0);
+      wallShape.lineTo(baseW / 2, 22);
+      // Percorrer as 7 pétalas da direita (18°) para a esquerda (162°)
+      for (let i = petals.length - 1; i >= 0; i--) {
+        const pt = petals[i];
+        const aRad = (pt.ang * Math.PI) / 180;
+        const px = Math.cos(aRad) * pt.r;
+        const py = Math.sin(aRad) * pt.r;
+        const aNext = i > 0 ? ((pt.ang + petals[i - 1].ang) * 0.5 * Math.PI) / 180 : Math.PI;
+        const rValley = i > 0 ? (Math.min(pt.r, petals[i - 1].r) - 10) : 22;
+        wallShape.quadraticCurveTo(px, py + 6, i > 0 ? Math.cos(aNext) * rValley : -baseW / 2, i > 0 ? Math.sin(aNext) * rValley : 22);
+      }
+      wallShape.lineTo(-baseW / 2, 0);
+      wallShape.closePath();
+
+      const wallGeo = new THREE.ExtrudeGeometry(wallShape, { depth: th, bevelEnabled: true, bevelThickness: 0.9, bevelSize: 0.8, bevelSegments: 2 });
+      wallGeo.translate(0, 0, -th / 2);
+
+      const addShellWall = (zPos, faceDir) => {
+        const grp = new THREE.Group();
+        grp.position.set(0, th, zPos);
+        addMeshWithEdges(grp, wallGeo.clone(), creamRimMat, [0, 0, 0]);
+
+        // 7 pétalas esmaltadas em relevo suave alternando azul e verde-sálvia
+        petals.forEach(pt => {
+          const aRad = (pt.ang * Math.PI) / 180;
+          const pShape = new THREE.Shape();
+          const aL = aRad + 0.17, aR = aRad - 0.17;
+          const rIn = 10, rOut = pt.r - 5;
+          pShape.moveTo(Math.cos(aR) * rIn, Math.max(4, Math.sin(aR) * rIn));
+          pShape.lineTo(Math.cos(aR) * (rOut - 10), Math.sin(aR) * (rOut - 10));
+          pShape.quadraticCurveTo(Math.cos(aRad) * rOut, Math.sin(aRad) * rOut, Math.cos(aL) * (rOut - 10), Math.sin(aL) * (rOut - 10));
+          pShape.lineTo(Math.cos(aL) * rIn, Math.max(4, Math.sin(aL) * rIn));
+          pShape.closePath();
+          const pGeo = new THREE.ExtrudeGeometry(pShape, { depth: 1.6, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.5, bevelSegments: 2 });
+          const pm = new THREE.Mesh(pGeo, pt.col);
+          pm.position.z = faceDir > 0 ? (th / 2 - 0.2) : (-th / 2 - 1.4);
+          grp.add(pm);
+        });
+        g.add(grp);
+      };
+
+      if (!isSectionCut) addShellWall(gap / 2 + th / 2 + exp * 0.65, 1);
+      addShellWall(-gap / 2 - th / 2 - exp * 0.65, -1);
+
+      // Base plana
+      addMeshWithEdges(g, new THREE.BoxGeometry(baseW, th, gap + th * 2), creamRimMat, [0, th / 2 - exp * 0.3, 0]);
+
+      // Pilha de guardanapos no centro
+      addMeshWithEdges(g, new THREE.BoxGeometry(132, 128, gap - 6), paperMat, [0, th + 64 + exp * 0.9, 0]);
+    }
+
     const PIECES = [
       // --- LOTE 01 ---
       // -----------------------------------------------------------------------
@@ -26410,9 +26798,9 @@
 
       // --- LOTE 31 ---
       {
-        id: '211',
+        id: '160A',
         batch: 31,
-        code: '211',
+        code: '160A',
         shortName: 'Garrafa Assimétrica Oblíqua',
         name: '211. Garrafa Escultural Assimétrica c/ Junta Oblíqua & Rolha (Lote 31 — 3 Folhas A4 1:1)',
         thicknessMm: 5.0,
@@ -26539,9 +26927,9 @@
       },
 
       {
-        id: '212',
+        id: '160B',
         batch: 31,
-        code: '212',
+        code: '160B',
         shortName: 'Arandela Arco Vazado',
         name: '212. Arandela de Parede em Arco Vazado p/ Vela Rechaud (Lote 31 — 2 Folhas A4 1:1)',
         thicknessMm: 5.5,
@@ -26657,6 +27045,195 @@
         }
       }
     
+,
+
+      // --- LOTE 40 ---
+      {
+        id: '211', batch: 40, code: '211', shortName: 'Conjunto Madar (2 Garrafas)',
+        name: '211. Conjunto "Madar" — Dupla de Garrafas Grafite c/ Medalhões em Anel & Rolhas Esféricas (Lote 40 — 2 Folhas A4)',
+        thicknessMm: 5.0, sheets: 2, defaultAcc: 'lid',
+        desc: 'Conjunto autoral de 2 garrafas (Alta Ø130×252mm e Baixa Ø108×145mm, E=5.0mm): bojos esféricos em grés cinza grafite fosco com medalhões circulares em anel de madeira/argila clara embutidos (lateral na alta, frontal na baixa) e rolhas esféricas rajadas.',
+        partsList: [
+          'Garrafa Alta: Bojo Ø130mm + Gargalo Longo Ø25×118mm + Medalhão Ø60mm + Rolha Esférica',
+          'Garrafa Baixa: Bojo Ø108mm + Gargalo Curto Ø23×34mm + Medalhão Ø50mm + Rolha Esférica'
+        ],
+        buildSolid: (g) => buildMadarSetSolid(g),
+        buildPlates: () => {
+          const sk = createSkeletonBuilder();
+          [[-76, 65, 240], [72, 54, 138]].forEach(([cx, r, h]) => {
+            sk.addRing(r, r, r * 0.88, 24, sk.eOuter, cx, 0);
+            sk.addRing(12, 12, h, 14, sk.eAccent, cx, 0);
+          });
+          return sk;
+        },
+        draw2D: () => {
+          const s1 = `<g transform="translate(0, 0)">` +
+            a4SheetFrame(0, 1, 2, '211', 'Conjunto Madar — Gabaritos de Perfil 1:1 (Alta & Baixa) e Gargalos', 5.0) +
+            `<g transform="translate(82, 192) scale(0.72)">` +
+              `<path d="M -29 0 C -72 -18 -72 -106 -14 -124 L -12 -242 L 12 -242 L 14 -124 C 72 -106 72 -18 29 0 Z" fill="#f3eadc" stroke="#181615" stroke-width="1.2"/>` +
+              `<circle cx="24" cy="-58" r="30" fill="none" stroke="#c2593f" stroke-width="4"/>` +
+              `<text x="0" y="-140" text-anchor="middle" font-size="3.8" font-weight="700" fill="#181615">1. Garrafa Alta (esc 72%)</text>` +
+            `</g>` +
+            `<g transform="translate(208, 192) scale(0.72)">` +
+              `<path d="M -24 0 C -60 -15 -60 -88 -12 -102 L -11 -138 L 11 -138 L 12 -102 C 60 -88 60 -15 24 0 Z" fill="#f3eadc" stroke="#181615" stroke-width="1.2"/>` +
+              `<circle cx="0" cy="-48" r="25" fill="none" stroke="#c2593f" stroke-width="4"/>` +
+              `<text x="0" y="-150" text-anchor="middle" font-size="3.8" font-weight="700" fill="#181615">2. Garrafa Baixa (esc 72%)</text>` +
+            `</g></g>`;
+          const s2 = `<g transform="translate(0, 225)">` +
+            a4SheetFrame(0, 2, 2, '211', 'Conjunto Madar — Tiras dos Gargalos & Medalhões Circulares (1:1)', 5.0) +
+            drawAnnotatedRect(18, 28, 78.5, 118, { title: '3. Gargalo Alto (78.5×118)', bevelLeft: 4.5, bevelRight: 4.5 }) +
+            drawAnnotatedRect(114, 28, 72.3, 38, { title: '4. Gargalo Baixo (72×38)', bevelLeft: 4.5, bevelRight: 4.5 }) +
+            drawAnnotatedDisk(242, 74, 30, { title: '5. Anel Alto Ø60', subtitle: 'Vão Ø51mm', plugRingR: 25.5, wBevel: 3 }) +
+            drawAnnotatedDisk(242, 154, 25, { title: '6. Anel Baixo Ø50', subtitle: 'Vão Ø41mm', plugRingR: 20.5, wBevel: 3 }) +
+            `</g>`;
+          return svgDefs() + filterSheetsSvg([s1, s2]);
+        }
+      },
+
+      {
+        id: '212', batch: 40, code: '212', shortName: 'Conjunto 4 Galheteiros',
+        name: '212. Conjunto Quarteto de Galheteiros c/ Alça Circular & Rolha de Cortiça (Lote 40 — 1 Folha A4 1:1)',
+        thicknessMm: 4.5, sheets: 1, defaultAcc: 'lid',
+        desc: 'Conjunto de 4 galheteiros coordenados (Ø72×H=156mm cada, E=4.5mm) em 4 esmaltes distintos (verde oliva, branco salpicado, areia/base crua e cinza craquelado), com bico vertedor discreto, alça circular no pescoço (Ø30mm) e rolha de cortiça.',
+        partsList: ['4× Paredes Cilíndricas (226×86mm)', '4× Cones Ombro/Gargalo (Ø72→Ø30)', '4× Fundos Ø72mm', '4× Alças Circulares Ø30mm', '4× Rolhas Cortiça Ø22mm'],
+        buildSolid: (g) => buildCruetQuartetSolid(g),
+        buildPlates: () => {
+          const sk = createSkeletonBuilder();
+          [-120, -40, 40, 120].forEach(cx => {
+            const r0 = sk.addRing(36, 36, 0, 16, sk.eInner, cx, 0);
+            const r1 = sk.addRing(36, 36, 82, 16, sk.eOuter, cx, 0);
+            const r2 = sk.addRing(15, 15, 144, 14, sk.eOuter, cx, 0);
+            sk.connectRings(r0, r1, 16, 4, sk.eOuter);
+            sk.addRing(14, 4, 124, 12, sk.eAccent, cx + 26, 0);
+          });
+          return sk;
+        },
+        draw2D: () => {
+          const s1 = `<g transform="translate(0, 0)">` +
+            a4SheetFrame(0, 1, 1, '212', 'Conjunto 4 Galheteiros — Molde Unitário Completo 1:1 (Repetir 4×)', 4.5) +
+            drawAnnotatedRect(18, 26, 226.2, 86, { title: '1. Parede Corpo Cilíndrico Ø72 (1:1 • Cortar 4×)', subtitle: '226.2×86mm • Bisel 45°', bevelLeft: 4.5, bevelRight: 4.5, bevelBottom: 4.5 }) +
+            drawAnnotatedDisk(62, 158, 36, { title: '2. Fundo Ø72 (4×)', subtitle: 'E=5.0mm', wBevel: 4.5 }) +
+            drawAnnotatedRect(118, 128, 96, 42, { title: '3. Gargalo Ø30 (4×)', subtitle: 'Puxar bico de um lado', bevelLeft: 4, bevelRight: 4 }) +
+            drawAnnotatedDisk(256, 154, 15, { title: '4. Alça Ø30 (4×)', subtitle: 'Rolo Ø7.5×95mm', wBevel: 3 }) +
+            `</g>`;
+          return svgDefs() + s1;
+        }
+      },
+
+      {
+        id: '213', batch: 40, code: '213', shortName: 'Galheteiro Ergonômico',
+        name: '213. Galheteiro Cônico Verde Oliva c/ Bico Oblíquo & Cavidade de Polegar (Lote 40 — 1 Folha A4 1:1)',
+        thicknessMm: 5.0, sheets: 1,
+        desc: 'Galheteiro ergonômico sem alça (Ø82×H=195mm, E=5.0mm): corpo tronco-cônico com boca em corte oblíquo alongado em bico vertedor pontiagudo, cavidade côncava pressionada na lateral traseira para apoio firme do polegar e pé em argila crua aparente.',
+        partsList: ['1× Setor Corpo Cônico c/ Curva de Bico Oblíquo', '1× Disco Fundo Ø72mm', 'Marcação da Cavidade de Polegar (y=96mm)'],
+        buildSolid: (g) => buildOliveCruetSolid(g),
+        buildPlates: () => {
+          const sk = createSkeletonBuilder();
+          const r0 = sk.addRing(36, 36, 0, 24, sk.eInner);
+          const r1 = sk.addRing(32, 32, 96, 24, sk.eOuter);
+          const r2 = sk.addRing(26, 26, 168, 24, sk.eAccent);
+          sk.connectRings(r0, r1, 24, 3, sk.eOuter);
+          sk.connectRings(r1, r2, 24, 3, sk.eOuter);
+          return sk;
+        },
+        draw2D: () => {
+          const s1 = `<g transform="translate(0, 0)">` +
+            a4SheetFrame(0, 1, 1, '213', 'Galheteiro Ergonômico — Placa Cônica c/ Bico Oblíquo & Fundo (1:1)', 5.0) +
+            drawAnnotatedRect(18, 24, 214, 165, {
+              title: '1. Parede Cônica (Comp. base 232 → topo 164mm • H=165..195mm)',
+              subtitle: 'Pressionar cavidade ergonômica Ø42mm com a ponta dos dedos em y=96mm',
+              bevelLeft: 5, bevelRight: 5, bevelBottom: 5
+            }) +
+            `<circle cx="125" cy="112" r="20" fill="url(#slipDots)" stroke="#2d6a4f" stroke-width="0.8"/>` +
+            `<text x="125" y="113" text-anchor="middle" font-size="2.3" font-weight="700" fill="#1b4332">Cavidade Polegar</text>` +
+            drawAnnotatedDisk(254, 108, 36, { title: '2. Fundo Ø72mm', subtitle: 'Base crua 8mm', wBevel: 5 }) +
+            `</g>`;
+          return svgDefs() + s1;
+        }
+      },
+
+      {
+        id: '214', batch: 40, code: '214', shortName: 'Conjunto Japonês Sizuku',
+        name: '214. Conjunto Japonês Moderno "Sizuku Forumu" (Travessa Sinuosa 4 Módulos + Leque + Copo + Ovais) (Lote 40 — 2 Folhas A4)',
+        thicknessMm: 4.5, sheets: 2, defaultAcc: 'lid',
+        desc: 'Jogo completo de louça japonesa em placas (E=4.5mm): travessa sinuosa modular em 4 arcos de 90° formando um rio em S, prato em leque com recorte semicircular para encaixe da molheira (clicável) + hashis, copo sobre 4 pézinhos esféricos e dupla de pratos ovais.',
+        partsList: [
+          '4× Módulos Curvos 90° Travessa Sinuosa (R_in=34 / R_out=78mm)',
+          '1× Prato Leque c/ Recorte (R=112mm) + 1× Molheira Encaixada Ø60mm',
+          '1× Copo c/ 4 Pézinhos Esféricos + 2× Pratos Ovais Rasos'
+        ],
+        buildSolid: (g) => buildSizukuSetSolid(g),
+        buildPlates: () => {
+          const sk = createSkeletonBuilder();
+          sk.addBoxWire(0, 8, -80, 310, 16, 150, 0, 0, sk.eOuter);
+          sk.addBoxWire(0, 8, 108, 190, 14, 96, 0, 0, sk.eAccent);
+          sk.addRing(28, 28, 38, 16, sk.eInner, 14, 12);
+          return sk;
+        },
+        draw2D: () => {
+          const s1 = `<g transform="translate(0, 0)">` +
+            a4SheetFrame(0, 1, 2, '214', 'Conjunto Sizuku — Módulo Curvo 90° Travessa Sinuosa (4×) & Prato Leque (1:1)', 4.5) +
+            `<g transform="translate(62, 118)">` +
+              `<path d="M 34 0 L 78 0 A 78 78 0 0 0 0 -78 L 0 -34 A 34 34 0 0 1 34 0 Z" fill="#f3eadc" stroke="#181615" stroke-width="0.9"/>` +
+              `<text x="38" y="-38" text-anchor="middle" font-size="2.7" font-weight="700" fill="#181615">1. Módulo S 90° (4×)</text>` +
+              `<text x="38" y="-31" text-anchor="middle" font-size="2.2" fill="#9c422b">R34→R78 • Borda 16mm</text>` +
+            `</g>` +
+            `<g transform="translate(206, 178)">` +
+              `<path d="M -92 -64 A 112 112 0 0 1 92 -64 L 28 -20 A 34 34 0 0 0 -28 -20 Z" fill="#f3eadc" stroke="#181615" stroke-width="0.9"/>` +
+              `<text x="0" y="-66" text-anchor="middle" font-size="2.9" font-weight="700" fill="#181615">2. Prato Leque (1:1 • R=112mm)</text>` +
+              `<text x="0" y="-59" text-anchor="middle" font-size="2.3" fill="#2d6a4f">Recorte frontal R=34mm p/ Molheira Ø60</text>` +
+            `</g></g>`;
+          const s2 = `<g transform="translate(0, 225)">` +
+            a4SheetFrame(0, 2, 2, '214', 'Conjunto Sizuku — Molheira Ø60, Copo 4 Pézinhos & Pratos Ovais (1:1)', 4.5) +
+            drawAnnotatedDisk(62, 76, 30, { title: '3. Molheira Ø60', subtitle: 'Borda 15mm', wBevel: 4 }) +
+            drawAnnotatedDisk(146, 76, 28, { title: '4. Copo Ø56×38', subtitle: '+ 4 Pézinhos Ø8mm', wBevel: 4 }) +
+            `<g transform="translate(232, 112)">` +
+              `<ellipse cx="0" cy="0" rx="54" ry="38" fill="#f3eadc" stroke="#181615" stroke-width="0.9"/>` +
+              `<text x="0" y="0" text-anchor="middle" font-size="2.8" font-weight="700" fill="#181615">5. Prato Oval (esc 72%)</text>` +
+              `<text x="0" y="6" text-anchor="middle" font-size="2.2" fill="#9c422b">Real 150×102mm + Mini 76×58</text>` +
+            `</g></g>`;
+          return svgDefs() + filterSheetsSvg([s1, s2]);
+        }
+      },
+
+      {
+        id: '215', batch: 40, code: '215', shortName: 'Porta-Guardanapos Concha',
+        name: '215. Porta-Guardanapos Leque / Concha Art Déco de 7 Pétalas Bicolor (Lote 40 — 1 Folha A4 1:1)',
+        thicknessMm: 6.5, sheets: 1,
+        desc: 'Porta-guardanapos em placas (142×96×49mm, E=6.5mm): 2 paredes escalopadas em formato de concha/leque com 7 pétalas radiais em relevo suave alternando verde sálvia e azul acinzentado com frisos em argila creme, unidas por base retangular.',
+        partsList: ['2× Paredes Concha 7 Pétalas (142×96mm, E=6.5mm)', '1× Base Plana (142×49mm, E=6.5mm)'],
+        buildSolid: (g) => buildShellNapkinSolid(g),
+        buildPlates: () => {
+          const sk = createSkeletonBuilder();
+          const exp = isExploded ? 24 : 0;
+          sk.addBoxWire(0, 3.2, 0, 142, 6.5, 49, 0, 0, sk.eInner);
+          sk.addBoxWire(0, 54, 21 + exp * 0.65, 142, 96, 6.5, 0, 0, sk.eOuter);
+          sk.addBoxWire(0, 54, -21 - exp * 0.65, 142, 96, 6.5, 0, 0, sk.eOuter);
+          return sk;
+        },
+        draw2D: () => {
+          const s1 = `<g transform="translate(0, 0)">` +
+            a4SheetFrame(0, 1, 1, '215', 'Porta-Guardanapos Concha 7 Pétalas — 2× Paredes & Base (1:1)', 6.5) +
+            `<g transform="translate(104, 124)">` +
+              `<path d="M -71 0 L 71 0 L 71 -22 Q 72 -44 54 -48 Q 52 -68 32 -68 Q 22 -86 0 -96 Q -22 -86 -32 -68 Q -52 -68 -54 -48 Q -72 -44 -71 -22 Z" fill="#f3eadc" stroke="#181615" stroke-width="0.95"/>` +
+              `<text x="0" y="-36" text-anchor="middle" font-size="3.0" font-weight="700" fill="#181615">1. Parede Concha 7 Pétalas (Cortar 2×)</text>` +
+              `<text x="0" y="-29" text-anchor="middle" font-size="2.3" fill="#9c422b">142 × 96 mm • E=6.5mm • Esculpir 6 sulcos radiais</text>` +
+              dimLine(-71, 6, 71, 6, '142.0 mm', 2.5, 2.5) +
+            `</g>` +
+            drawAnnotatedRect(33, 144, 142, 49, { title: '2. Base Plana (1:1 • 142×49mm)', subtitle: 'Vão interno 36mm', bevelTop: 6.5, bevelBottom: 6.5, isHorizontal: true }) +
+            `<g transform="translate(198, 42)">` +
+              `<rect x="0" y="0" width="88" height="140" fill="#fcfaf7" stroke="#6e655f" stroke-width="0.6"/>` +
+              `<text x="44" y="14" text-anchor="middle" font-size="2.7" font-weight="700" fill="#181615">Pintura Bicolor</text>` +
+              `<text x="6" y="28" font-size="2.2" fill="#3d3531">• Abrir os 6 sulcos radiais</text>` +
+              `<text x="6" y="36" font-size="2.2" fill="#3d3531">  com boleador Ø4mm.</text>` +
+              `<text x="6" y="50" font-size="2.2" fill="#2d6a4f">• Alternar esmalte verde</text>` +
+              `<text x="6" y="58" font-size="2.2" fill="#2d6a4f">  sálvia e azul acinzentado,</text>` +
+              `<text x="6" y="66" font-size="2.2" fill="#2d6a4f">  mantendo as nervuras em</text>` +
+              `<text x="6" y="74" font-size="2.2" fill="#2d6a4f">  creme aparente.</text>` +
+            `</g></g>`;
+          return svgDefs() + s1;
+        }
+      }
     ];
 
     // =========================================================================
@@ -27380,7 +27957,7 @@
       28: { name: 'Lote 28 — Arandelas & Mísulas de Parede Esculturais para Velas', label: 'Lote 28: Arandelas & Mísulas', codes: '135, 136, 137, 138, 139, 140, 141' },
       29: { name: 'Lote 29 — Nichos & Arandelas-Santuário de Parede para Velas', label: 'Lote 29: Nichos & Santuários', codes: '142, 143, 144, 145, 146, 147, 148' },
       30: { name: 'Lote 30 — Tesselações Cerâmicas Perfuradas para Costura Articulada', label: 'Lote 30: Cerâmica Costurada', codes: '149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160' },
-      31: { name: 'Lote 31 — Garrafa Assimétrica Oblíqua & Arandela Arco Vazado', label: 'Lote 31: Esculturais & Luz', codes: '211, 212' },
+      31: { name: 'Lote 31 — Garrafa Assimétrica Oblíqua & Arandela Arco Vazado', label: 'Lote 31: Esculturais & Luz', codes: '160A, 160B' },
       32: { name: 'Lote 32 — Vasos Poliédricos, Boleira 2 Andares, Copo Café & Torradeira', label: 'Lote 32: Vasos & Mesa', codes: '161, 162, 163, 164, 165, 166, 167, 168, 169' },
       33: { name: 'Lote 33 — Vaso Donut, Coleção Triangular, Ondulado & Auto-Irrigáveis', label: 'Lote 33: Vasos & Irrigação', codes: '170, 171, 172, 173, 174, 175' },
       34: { name: 'Lote 34 — Cachepots c/ Corda, Porta-Guardanapos, Porta-Ovos, Jardineira & Vaso Arco', label: 'Lote 34: Casa & Jardim', codes: '176, 177, 178, 179, 180, 181, 182, 183, 184' },
@@ -27388,7 +27965,8 @@
       36: { name: 'Lote 36 — Tubos Unidos, Vaso Éveil, Donut Base Reta, Ponte Dupla & Bolso Parede', label: 'Lote 36: Vasos & Parede', codes: '192, 193, 194, 195, 196' },
       37: { name: 'Lote 37 — Bolsos de Parede, Vasos Bonsai & Vasos Cilíndricos c/ Esferas', label: 'Lote 37: Parede, Bonsai & Esferas', codes: '197, 198, 199, 200, 201, 202' },
       38: { name: 'Lote 38 — Cone em Cruz, Cubo Vazado, 3 Tubos Oblíquos, Ânfora & Vaso Oval', label: 'Lote 38: Arquitetura & Formas', codes: '203, 204, 205, 206, 207' },
-      39: { name: 'Lote 39 — Floreira Canelada, Vaso Curvo 4 Placas & Regador Diamante', label: 'Lote 39: Escultura & Jardim', codes: '208, 209, 210' }
+      39: { name: 'Lote 39 — Floreira Canelada, Vaso Curvo 4 Placas & Regador Diamante', label: 'Lote 39: Escultura & Jardim', codes: '208, 209, 210' },
+      40: { name: 'Lote 40 — Conjunto Madar, Quarteto Galheteiros, Galheteiro Ergonômico, Conjunto Sizuku & Concha', label: 'Lote 40: Conjuntos & Mesa', codes: '211, 212, 213, 214, 215' }
     };
     let currentBatch = 1;
 
