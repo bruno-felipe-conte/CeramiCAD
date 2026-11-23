@@ -91,3 +91,12 @@ Não requer instalação, build ou servidor complexo:
 | **Orbitar (girar)** | Botão esquerdo + arrastar |
 | **Zoom** | Roda do mouse / pinça |
 | **Mover (Pan)** | Botão direito + arrastar |
+
+---
+
+## 📚 Documentação Técnica & Aprendizados de Engenharia
+
+Para consultar os princípios matemáticos de modelagem, regras de corte, o algoritmo de *Bin Packing 2D* em múltiplas colunas e a arquitetura do projeto:
+- 📖 [Diretrizes de Engenharia e Aprendizados Técnicos (`docs/aprendizados.md`)](./docs/aprendizados.md)
+- 🧠 [Skill Arquitetural CeramiCAD para Agentes de IA (`.agents/skills/ceramic-3d-architect/SKILL.md`)](./.agents/skills/ceramic-3d-architect/SKILL.md)
+
