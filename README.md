@@ -4,8 +4,8 @@
 
 **Expositor 3D Interativo & Gerador de Moldes A4 1:1 para Cerâmica em Placas (*Slab Building*)**
 
-[![Modelos](https://img.shields.io/badge/Cat%C3%A1logo-162%20Pe%C3%A7as-a3b8a8?style=for-the-badge)](#cat%C3%A1logo-completo-31-lotes)
-[![Lotes](https://img.shields.io/badge/Cole%C3%A7%C3%A3o-31%20Lotes-c97e56?style=for-the-badge)](#cat%C3%A1logo-completo-31-lotes)
+[![Modelos](https://img.shields.io/badge/Cat%C3%A1logo-212%20Pe%C3%A7as-a3b8a8?style=for-the-badge)](#cat%C3%A1logo-completo-40-lotes)
+[![Lotes](https://img.shields.io/badge/Cole%C3%A7%C3%A3o-40%20Lotes-c97e56?style=for-the-badge)](#cat%C3%A1logo-completo-40-lotes)
 [![Escala A4](https://img.shields.io/badge/Moldes%202D-A4%201%3A1%20Real-4f7cac?style=for-the-badge)](#exporta%C3%A7%C3%A3o--impress%C3%A3o-11)
 [![Arquivo %C3%9Anico](https://img.shields.io/badge/Deploy-HTML%20%C3%9Anico%20Autocontido-1f242d?style=for-the-badge)](#como-usar)
 
@@ -19,7 +19,7 @@
 
 O **CeramiCAD** é uma aplicação web **100% autocontida em um único arquivo HTML** ([`CeramiCAD.html`](./CeramiCAD.html)) para projetar, inspecionar e planificar peças cerâmicas construídas por placas (*slab building*).
 
-Cada uma das **162 peças** do catálogo combina modelagem paramétrica em Three.js, esqueleto estrutural sincronizado e pranchas vetoriais **em escala real 1:1 (297 × 210 mm)** prontas para impressão, corte na argila e exportação em **PDF** ou **STL**.
+Cada uma das **212 peças** do catálogo combina modelagem paramétrica em Three.js, esqueleto estrutural sincronizado e pranchas vetoriais **em escala real 1:1 (297 × 210 mm)** prontas para impressão, corte na argila e exportação em **PDF** ou **STL**.
 
 ---
 
@@ -35,8 +35,10 @@ Escolha livremente quais visualizadores exibir na barra lateral retrátil (míni
 
 ### 2. Controles Interativos de Bancada
 - **Vista Explodida**: separa todas as placas, fundos, tampas, alças, bicos e acessórios para inspeção da montagem.
-- **Corte Seccional (½)**: abre o sólido ao meio para revelar espessura de parede, encaixes internos e galerias de tampa.
-- **Paleta Cerâmica**: alternância de argilas e esmaltes em tempo real.
+- **Corte Seccional (½) por Clipping Plane Universal**: abre qualquer geometria ao meio em $Z=0$ revelando espessuras internas, galerias e encaixes.
+- **Paleta Cerâmica PBR Inteligente**: alternância instantânea entre argilas cruas e esmaltes vidrados, preservando acessórios transparentes (tubos de ensaio) e detalhes botânicos.
+- **Redimensionamento Paramétrico Dinâmico de Altura**: sliders de altura reativos que recalculam o volume Three.js e repaginam automaticamente os moldes 2D.
+- **Shelf / Bin Packing 2D em Múltiplas Colunas**: algoritmo inteligente que agrupa peças pequenas lado a lado na mesma folha A4 e executa *split tiling* contínuo (com abas de 15 mm e miras $\oplus$) apenas para peças maiores que a folha, eliminando 100% de folhas fantasmas ou linhas órfãs.
 - **Exportação Direta**:
   - **PDF A4 1:1** multi-folhas pronto para imprimir sem redimensionamento (`jsPDF`).
   - **STL 3D** para impressão 3D de gabaritos/protótipos (`STLExporter`).
@@ -46,13 +48,13 @@ Escolha livremente quais visualizadores exibir na barra lateral retrátil (míni
 ## 📐 Princípios de Engenharia Cerâmica Aplicados
 
 1. **Desenvolvibilidade 2D Exata**: cilindros como retângulos ($P \times H$), troncos de cone como setores anulares ($R - r = s$, $\theta = f \cdot \frac{360^\circ (r_{\max} - r_{\min})}{s}$), pirâmides inclinadas como trapézios isósceles pela geratriz real.
-2. **Escala Real 1:1 Pós-Queima**: calibração para Cone 6 ($r = 12\%$) sem redução artificial de escala — peças maiores são divididas em meias-placas ou múltiplas folhas A4.
+2. **Escala Real 1:1 Pós-Queima**: calibração para Cone 6 ($r = 12\%$) sem redução artificial de escala — peças maiores são divididas em meias-placas ou múltiplas folhas A4 com abas de emenda calibradas.
 3. **Encaixes em Meia-Esquadria e Tolerâncias**: paredes poligonais fechadas por hexaedros exatos sem frestas e tampas com folga $\Delta\varnothing = 2{,}0\text{ mm}$.
 4. **Cotas de Bisel ($w = E \cdot \tan\theta$)**: faixas de desbaste e áreas de escarificação/barbotina indicadas diretamente nos moldes.
 
 ---
 
-## 🗂️ Catálogo Completo (31 Lotes • 162 Modelos)
+## 🗂️ Catálogo Completo (40 Lotes • 212 Modelos)
 
 | Lotes | Faixa de Códigos | Temas & Tipologias |
 | :--- | :--- | :--- |
@@ -62,7 +64,8 @@ Escolha livremente quais visualizadores exibir na barra lateral retrátil (míni
 | **Lotes 16 – 20** | `076` – `100` | Decanters, moringa, garrafa Bordeaux, fruteira plissada, jogo Ikigai, bandeja, vaso orbital |
 | **Lotes 21 – 25** | `101` – `119` | Xícaras hexagonais, luminárias facetadas/torres, cálice, travessas, bule poliédrico, lanternas |
 | **Lotes 26 – 30** | `120` – `155` | Azulejaria e tesselação geométrica, porta-retratos duplos, arandelas, nichos e cerâmica costurada |
-| **Lote 31** | `156` – `162` | Peças escultóricas avançadas, junta oblíqua assimétrica e formas orgânicas compostas |
+| **Lotes 31 – 35** | `156` – `190` | Peças escultóricas, ondas senoidais, vasos em arco, molduras de propagação sálvia/mostarda, pirâmides e suportes |
+| **Lotes 36 – 40** | `191` – `212` | Vasos de tubos múltiplos, floreira retangular canelada, regador diamante facetado, arandelas de arco vazado e peças complexas |
 
 ---
 
