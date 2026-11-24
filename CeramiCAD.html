@@ -33100,8 +33100,16 @@ maioria <html lang="pt-BR">
     controlsWire.minDistance = 25;
     controlsWire.maxDistance = 1800;
 
-    sceneWire.add(new THREE.AmbientLight(0xffffff, 1.0));
-    const gridWire = new THREE.GridHelper(240, 24, 0xd05840, 0xd6cfc7);
+    sceneWire.add(new THREE.AmbientLight(0xffffff, 0.85));
+    const wireKeyLight = new THREE.DirectionalLight(0xfffaf0, 0.55);
+    wireKeyLight.position.set(180, 280, 200);
+    sceneWire.add(wireKeyLight);
+    const wireFillLight = new THREE.DirectionalLight(0xe8dcd0, 0.35);
+    wireFillLight.position.set(-160, 90, -130);
+    sceneWire.add(wireFillLight);
+
+    const gridWire = new THREE.GridHelper(600, 60, 0xd05840, 0xdcd6cf);
+    gridWire.position.y = -0.1;
     sceneWire.add(gridWire);
 
     const activeGroupWire = new THREE.Group();
@@ -33648,12 +33656,111 @@ maioria <html lang="pt-BR">
 
     const wireOuterMat = new THREE.LineBasicMaterial({ color: 0x181615, linewidth: 2 });
     const wireInnerMat = new THREE.LineBasicMaterial({ color: 0x786e64, transparent: true, opacity: 0.75 });
-    const wireAccentMat = new THREE.LineBasicMaterial({ color: 0xc2593f, linewidth: 2 });
+    const wireAccentMat = new THREE.LineBasicMaterial({ color: 0xc2593f, linewidth: 2.5 });
+
+    // Materiais translúcidos de papel técnico / cartão cerâmico para dar corpo físico e oclusão ao esqueleto
+    const wirePaperNormalMat = new THREE.MeshLambertMaterial({
+      color: 0xf5eee3,
+      transparent: true,
+      opacity: 0.22,
+      side: THREE.DoubleSide,
+      depthWrite: true,
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1
+    });
+
+    const wirePaperSelectedMat = new THREE.MeshLambertMaterial({
+      color: 0xfde8e4,
+      transparent: true,
+      opacity: 0.35,
+      side: THREE.DoubleSide,
+      depthWrite: true,
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1
+    });
+
+    // Gera linhas de geratrizes longitudinais e costuras verticais para superfícies de revolução / cilíndricas
+    function buildSkeletonSeamGeometry(geo, numDivisions = 4) {
+      if (!geo || !geo.attributes || !geo.attributes.position) return null;
+      const pos = geo.attributes.position;
+      const count = pos.count;
+      if (count < 8) return null;
+
+      // Se a geometria é indexada, verifica se é revolução ou tubo
+      const seamPositions = [];
+      const bbox = new THREE.Box3();
+      for (let i = 0; i < count; i++) {
+        bbox.expandByPoint(new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)));
+      }
+      const h = bbox.max.y - bbox.min.y;
+      const maxRadius = Math.max(Math.abs(bbox.max.x), Math.abs(bbox.min.x), Math.abs(bbox.max.z), Math.abs(bbox.min.z));
+      if (h < 5 || maxRadius < 3) return null;
+
+      // Amostrar vértices longitudinais a cada ângulo azimutal (0°, 90°, 180°, 270°)
+      const angles = [];
+      for (let a = 0; a < numDivisions; a++) {
+        angles.push((a / numDivisions) * Math.PI * 2);
+      }
+
+      // Procurar pares de vértices próximos a cada plano azimutal
+      const tolerance = 0.08; // tolerância angular em radianos (~4.5°)
+      const ringsByAngle = angles.map(() => []);
+
+      for (let i = 0; i < count; i++) {
+        const x = pos.getX(i);
+        const y = pos.getY(i);
+        const z = pos.getZ(i);
+        const r = Math.sqrt(x * x + z * z);
+        if (r < 1.0) continue; // ignora centro do fundo
+        let theta = Math.atan2(z, x);
+        if (theta < 0) theta += Math.PI * 2;
+
+        for (let aIdx = 0; aIdx < angles.length; aIdx++) {
+          const targetA = angles[aIdx];
+          let diff = Math.abs(theta - targetA);
+          if (diff > Math.PI) diff = 2 * Math.PI - diff;
+          if (diff < tolerance) {
+            ringsByAngle[aIdx].push({ x, y, z, r });
+            break;
+          }
+        }
+      }
+
+      ringsByAngle.forEach(pts => {
+        if (pts.length < 2) return;
+        // Ordenar por altura Y
+        pts.sort((p1, p2) => p1.y - p2.y);
+        // Conectar pontos vizinhos para formar geratrizes verticais
+        for (let i = 0; i < pts.length - 1; i++) {
+          const pA = pts[i];
+          const pB = pts[i + 1];
+          const dy = Math.abs(pB.y - pA.y);
+          const dr = Math.abs(pB.r - pA.r);
+          // Só conecta se for segmento estrutural vertical contínuo
+          if (dy > 0.5 && dy < h * 0.95 && dr < maxRadius * 0.6) {
+            seamPositions.push(pA.x, pA.y, pA.z, pB.x, pB.y, pB.z);
+          }
+        }
+      });
+
+      if (seamPositions.length === 0) return null;
+      const seamGeo = new THREE.BufferGeometry();
+      seamGeo.setAttribute('position', new THREE.Float32BufferAttribute(seamPositions, 3));
+      return seamGeo;
+    }
 
     function syncSkeletonFromActiveGroup(solidRoot, wireRoot, piece) {
       while (wireRoot.children.length) {
         const ch = wireRoot.children[0];
-        if (ch.geometry) ch.geometry.dispose();
+        if (ch.traverse) {
+          ch.traverse(node => {
+            if (node.geometry) node.geometry.dispose();
+          });
+        } else if (ch.geometry) {
+          ch.geometry.dispose();
+        }
         wireRoot.remove(ch);
       }
       if (!solidRoot || typeof THREE.EdgesGeometry !== 'function') return 0;
@@ -33661,7 +33768,7 @@ maioria <html lang="pt-BR">
 
       const hasNativeCut = piece && typeof piece.buildSolid === 'function' && piece.buildSolid.toString().includes('isSectionCut');
       const wireClip = (isSectionCut && !hasNativeCut) ? [sectionClippingPlane] : [];
-      [wireOuterMat, wireInnerMat, wireAccentMat].forEach(m => {
+      [wireOuterMat, wireInnerMat, wireAccentMat, wirePaperNormalMat, wirePaperSelectedMat].forEach(m => {
         m.clippingPlanes = wireClip;
         m.needsUpdate = true;
       });
@@ -33680,6 +33787,19 @@ maioria <html lang="pt-BR">
           mat = wireInnerMat;
         }
 
+        const meshGroup = new THREE.Group();
+        if (obj.userData) {
+          if (obj.userData.subPieceId) meshGroup.userData.subPieceId = obj.userData.subPieceId;
+          if (obj.userData.accessoryType) meshGroup.userData.accessoryType = obj.userData.accessoryType;
+        }
+
+        // 1. CASCA ESTRUTURAL DE PAPEL TÉCNICO (Translúcida com oclusão de profundidade)
+        const paperMat = isSelectedObj ? wirePaperSelectedMat : wirePaperNormalMat;
+        const paperMesh = new THREE.Mesh(obj.geometry, paperMat);
+        paperMesh.renderOrder = 0;
+        meshGroup.add(paperMesh);
+
+        // 2. ARESTAS DE CONTORNO (EdgesGeometry)
         const gType = obj.geometry.type || '';
         const edgeAngle = /Sphere|Torus|Tube/i.test(gType) ? 22 : 18;
         let edgesGeo = new THREE.EdgesGeometry(obj.geometry, edgeAngle);
@@ -33688,12 +33808,25 @@ maioria <html lang="pt-BR">
           edgesGeo = new THREE.EdgesGeometry(obj.geometry, 10);
         }
         const line = new THREE.LineSegments(edgesGeo, mat);
-        if (obj.userData) {
-          if (obj.userData.subPieceId) line.userData.subPieceId = obj.userData.subPieceId;
-          if (obj.userData.accessoryType) line.userData.accessoryType = obj.userData.accessoryType;
+        line.renderOrder = 1;
+        meshGroup.add(line);
+
+        // 3. COSTURAS LONGITUDINAIS / GERATRIZES DE PLACA
+        const seamGeo = buildSkeletonSeamGeometry(obj.geometry, 4);
+        if (seamGeo) {
+          const seamMat = new THREE.LineBasicMaterial({
+            color: isSelectedObj ? 0xc2593f : 0x4a443e,
+            transparent: true,
+            opacity: isSelectedObj ? 0.9 : 0.45,
+            clippingPlanes: wireClip
+          });
+          const seamLines = new THREE.LineSegments(seamGeo, seamMat);
+          seamLines.renderOrder = 1;
+          meshGroup.add(seamLines);
         }
-        obj.matrixWorld.decompose(line.position, line.quaternion, line.scale);
-        wireRoot.add(line);
+
+        obj.matrixWorld.decompose(meshGroup.position, meshGroup.quaternion, meshGroup.scale);
+        wireRoot.add(meshGroup);
         count++;
       });
       return count;
