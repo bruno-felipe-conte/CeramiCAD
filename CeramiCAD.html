@@ -871,6 +871,7 @@ maioria <html lang="pt-BR">
     }
 
     let selectedAccessoryId = null;
+    let selectedAccessoryIds = new Set();
     const accTransforms = {
       handle: { offset: 0, height: 0, angle: 0 },
       spout: { offset: 0, height: 0, angle: 0 },
@@ -33239,7 +33240,8 @@ maioria <html lang="pt-BR">
       linePos.push(rX + 12, topY, rZ, tMin.x, topY, rZ);
 
       // Tarja de Altura nítida, ampla e centralizada sem corte
-      const hLabel = isSubItem ? 'Alt. Item: ' : 'Altura: ';
+      const countSel = selectedAccessoryIds.size;
+      const hLabel = isSubItem ? (countSel > 1 ? ('Alt. Grupo (' + countSel + 'pçs): ') : 'Alt. Item: ') : 'Altura: ';
       const hStr = hLabel + (activeH / 10).toFixed(1) + ' cm (' + activeH.toFixed(0) + ' mm)';
       const topBadge = createRulerTextSprite(hStr, 34, '#991b1b', 'rgba(255, 245, 245, 0.98)', '#e07a68');
       topBadge.scale.set(48, 12, 1);
@@ -33273,7 +33275,7 @@ maioria <html lang="pt-BR">
       wireRulerGroup.add(rulerLines);
 
       // Tarja de Largura no mesmo padrão nítido e sem corte
-      const wLabel = isSubItem ? 'Largura Item: ' : 'Largura: ';
+      const wLabel = isSubItem ? (countSel > 1 ? ('Largura Grupo (' + countSel + 'pçs): ') : 'Largura Item: ') : 'Largura: ';
       const wStr = wLabel + (activeW / 10).toFixed(1) + ' cm (' + activeW.toFixed(0) + ' mm)';
       const wBadge = createRulerTextSprite(wStr, 34, '#991b1b', 'rgba(255, 245, 245, 0.98)', '#e07a68');
       wBadge.scale.set(48, 12, 1);
@@ -33671,7 +33673,7 @@ maioria <html lang="pt-BR">
         if (piece && piece.batch === 26 && obj.geometry.type === 'BoxGeometry' && obj.position.y < -0.5) return;
 
         let mat = wireOuterMat;
-        const isSelectedObj = Boolean(selectedAccessoryId && obj.userData && (obj.userData.subPieceId === selectedAccessoryId || obj.userData.accessoryType === selectedAccessoryId));
+        const isSelectedObj = Boolean(obj.userData && ((selectedAccessoryIds.has(obj.userData.subPieceId) || selectedAccessoryIds.has(obj.userData.accessoryType)) || (selectedAccessoryId && (obj.userData.subPieceId === selectedAccessoryId || obj.userData.accessoryType === selectedAccessoryId))));
         if (isSelectedObj || (obj.userData && obj.userData.accessoryType) || obj.material === claySelectedMat || obj.geometry.type === 'TubeGeometry') {
           mat = wireAccentMat;
         } else if (obj.material === clayInnerMat || obj.material === darkHoleMat) {
@@ -33727,10 +33729,13 @@ maioria <html lang="pt-BR">
       applyActiveMaterialToGroup(activeGroup);
       applySectionCutToGroup(activeGroup, isSectionCut);
       // Destacar visualmente o objeto/subpeça selecionada com material selecionado
-      if (selectedAccessoryId) {
+      if (selectedAccessoryIds.size > 0 || selectedAccessoryId) {
         activeGroup.traverse(obj => {
-          if (obj.isMesh && obj.userData && (obj.userData.subPieceId === selectedAccessoryId || obj.userData.accessoryType === selectedAccessoryId)) {
-            obj.material = claySelectedMat;
+          if (obj.isMesh && obj.userData) {
+            const sid = obj.userData.subPieceId || obj.userData.accessoryType;
+            if (sid && (selectedAccessoryIds.has(sid) || selectedAccessoryId === sid)) {
+              obj.material = claySelectedMat;
+            }
           }
         });
       }
@@ -33790,12 +33795,15 @@ maioria <html lang="pt-BR">
       const finalRealHeightMm = basePieceHeightMm * pieceHeightScale * pieceUniformScale;
       // Calcular bounding box do item selecionado no espaço do mundo
       let selectedItemBbox = null;
-      if (selectedAccessoryId) {
+      if (selectedAccessoryIds.size > 0 || selectedAccessoryId) {
         const selBox = new THREE.Box3();
         activeGroupWire.traverse(obj => {
           if (obj.isLineSegments || obj.isMesh) {
-            if (obj.userData && (obj.userData.subPieceId === selectedAccessoryId || obj.userData.accessoryType === selectedAccessoryId)) {
-              selBox.expandByObject(obj);
+            if (obj.userData) {
+              const sid = obj.userData.subPieceId || obj.userData.accessoryType;
+              if (sid && (selectedAccessoryIds.has(sid) || selectedAccessoryId === sid)) {
+                selBox.expandByObject(obj);
+              }
             }
           }
         });
@@ -34001,8 +34009,9 @@ maioria <html lang="pt-BR">
         if (foundType) break;
       }
 
-      if (foundType) selectAccessory(foundType);
-      else deselectAccessory();
+      const isCtrl = Boolean(e.ctrlKey || e.metaKey || e.shiftKey);
+      if (foundType) selectAccessory(foundType, isCtrl);
+      else if (!isCtrl) deselectAccessory();
     }
 
     if (containerWire) {
@@ -34016,18 +34025,44 @@ maioria <html lang="pt-BR">
     }
 
 
-    function selectAccessory(type) {
+    function selectAccessory(type, isMultiSelect = false) {
       if (!type) return;
-      selectedAccessoryId = type;
+      if (isMultiSelect) {
+        if (selectedAccessoryIds.has(type)) {
+          selectedAccessoryIds.delete(type);
+          if (selectedAccessoryId === type) {
+            selectedAccessoryId = selectedAccessoryIds.size > 0 ? Array.from(selectedAccessoryIds)[selectedAccessoryIds.size - 1] : null;
+          }
+        } else {
+          selectedAccessoryIds.add(type);
+          selectedAccessoryId = type;
+        }
+      } else {
+        selectedAccessoryIds.clear();
+        selectedAccessoryIds.add(type);
+        selectedAccessoryId = type;
+      }
+
+      if (selectedAccessoryIds.size === 0) {
+        deselectAccessory();
+        return;
+      }
+
       const p = PIECES[activeIdx];
       const items = getPieceSubItems(p);
-      const matched = items.find(it => it.id === type);
-      const displayName = matched ? matched.label : (ACC_NAMES[type] || type);
+      let displayName = '';
+      if (selectedAccessoryIds.size === 1) {
+        const singleId = Array.from(selectedAccessoryIds)[0];
+        const matched = items.find(it => it.id === singleId);
+        displayName = matched ? matched.label : (ACC_NAMES[singleId] || singleId);
+      } else {
+        displayName = selectedAccessoryIds.size + ' Itens Selecionados (Ctrl)';
+      }
 
       const badge = document.getElementById('selectionBadge');
       if (badge) {
         badge.classList.add('active');
-        badge.textContent = '🎯 ' + displayName + ' — Setas para mover • Q/E para girar • Esc';
+        badge.textContent = '🎯 ' + displayName + ' — Ctrl+Clique para multi-seleção • Esc';
       }
       const dock = document.getElementById('accDock');
       if (dock) {
@@ -34041,6 +34076,7 @@ maioria <html lang="pt-BR">
 
     function deselectAccessory() {
       selectedAccessoryId = null;
+      selectedAccessoryIds.clear();
       const badge = document.getElementById('selectionBadge');
       if (badge) badge.classList.remove('active');
       const dock = document.getElementById('accDock');
@@ -34084,7 +34120,7 @@ maioria <html lang="pt-BR">
       const items = getPieceSubItems(p);
       items.forEach(it => {
         const t = getAccT(it.id);
-        const isSelected = selectedAccessoryId === it.id;
+        const isSelected = selectedAccessoryIds.has(it.id) || selectedAccessoryId === it.id;
         const scalePct = Math.round((t.scale !== undefined ? t.scale : 1.0) * 100);
         const hasCustom = (t.offset !== 0 || t.height !== 0 || t.angle !== 0 || scalePct !== 100);
 
@@ -34100,8 +34136,9 @@ maioria <html lang="pt-BR">
           (hasCustom ? '<span class="text-amber-400 font-bold">' + scalePct + '%</span>' : '<span class="text-gray-500">' + scalePct + '%</span>') +
           '</div>';
 
-        row.onclick = () => {
-          selectAccessory(it.id);
+        row.onclick = (e) => {
+          const isCtrl = Boolean(e.ctrlKey || e.metaKey || e.shiftKey);
+          selectAccessory(it.id, isCtrl);
         };
         container.appendChild(row);
       });
