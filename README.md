@@ -4,8 +4,8 @@
 
 **Expositor 3D Interativo & Gerador de Moldes A4 1:1 para Cerâmica em Placas (*Slab Building*)**
 
-[![Modelos](https://img.shields.io/badge/Cat%C3%A1logo-212%20Pe%C3%A7as-a3b8a8?style=for-the-badge)](#cat%C3%A1logo-completo-40-lotes)
-[![Lotes](https://img.shields.io/badge/Cole%C3%A7%C3%A3o-40%20Lotes-c97e56?style=for-the-badge)](#cat%C3%A1logo-completo-40-lotes)
+[![Modelos](https://img.shields.io/badge/Cat%C3%A1logo-247%20Pe%C3%A7as-a3b8a8?style=for-the-badge)](#cat%C3%A1logo-completo-46-lotes)
+[![Lotes](https://img.shields.io/badge/Cole%C3%A7%C3%A3o-46%20Lotes-c97e56?style=for-the-badge)](#cat%C3%A1logo-completo-46-lotes)
 [![Escala A4](https://img.shields.io/badge/Moldes%202D-A4%201%3A1%20Real-4f7cac?style=for-the-badge)](#exporta%C3%A7%C3%A3o--impress%C3%A3o-11)
 [![Arquivo %C3%9Anico](https://img.shields.io/badge/Deploy-HTML%20%C3%9Anico%20Autocontido-1f242d?style=for-the-badge)](#como-usar)
 
@@ -19,7 +19,7 @@
 
 O **CeramiCAD** é uma aplicação web **100% autocontida em um único arquivo HTML** ([`CeramiCAD.html`](./CeramiCAD.html)) para projetar, inspecionar e planificar peças cerâmicas construídas por placas (*slab building*).
 
-Cada uma das **212 peças** do catálogo combina modelagem paramétrica em Three.js, esqueleto estrutural sincronizado e pranchas vetoriais **em escala real 1:1 (297 × 210 mm)** prontas para impressão, corte na argila e exportação em **PDF** ou **STL**.
+Cada uma das **247 peças** do catálogo combina modelagem paramétrica em Three.js, esqueleto estrutural sincronizado e pranchas vetoriais **em escala real 1:1 (297 × 210 mm)** prontas para impressão, corte na argila e exportação em **PDF** ou **STL**.
 
 ---
 
@@ -54,7 +54,7 @@ Escolha livremente quais visualizadores exibir na barra lateral retrátil (míni
 
 ---
 
-## 🗂️ Catálogo Completo (40 Lotes • 212 Modelos)
+## 🗂️ Catálogo Completo (46 Lotes • 247 Modelos)
 
 | Lotes | Faixa de Códigos | Temas & Tipologias |
 | :--- | :--- | :--- |
@@ -65,7 +65,8 @@ Escolha livremente quais visualizadores exibir na barra lateral retrátil (míni
 | **Lotes 21 – 25** | `101` – `119` | Xícaras hexagonais, luminárias facetadas/torres, cálice, travessas, bule poliédrico, lanternas |
 | **Lotes 26 – 30** | `120` – `155` | Azulejaria e tesselação geométrica, porta-retratos duplos, arandelas, nichos e cerâmica costurada |
 | **Lotes 31 – 35** | `156` – `190` | Peças escultóricas, ondas senoidais, vasos em arco, molduras de propagação sálvia/mostarda, pirâmides e suportes |
-| **Lotes 36 – 40** | `191` – `212` | Vasos de tubos múltiplos, floreira retangular canelada, regador diamante facetado, arandelas de arco vazado e peças complexas |
+| **Lotes 36 – 40** | `191` – `215` | Vasos de tubos múltiplos, floreira retangular canelada, regador diamante facetado, conjuntos Madar, galheteiros, Sizuku & porta-guardanapos |
+| **Lotes 41 – 46** | `216` – `245` | Travessas, cantis, garrafas, trio Neuralsip, moringa, jarras rústicas/disco/argolas, manteigueiras francesas/retangulares, petisqueira modular 4×, porta-guardanapos temáticos & saleiro articulado |
 
 ---
 
