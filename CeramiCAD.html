@@ -33857,6 +33857,15 @@ maioria <html lang="pt-BR">
           meshGroup.add(seamLines);
         }
 
+        // Replicar identificadores do objeto em todos os filhos da malha técnica
+        meshGroup.traverse(child => {
+          if (child !== meshGroup) {
+            if (!child.userData) child.userData = {};
+            if (meshGroup.userData.subPieceId) child.userData.subPieceId = meshGroup.userData.subPieceId;
+            if (meshGroup.userData.accessoryType) child.userData.accessoryType = meshGroup.userData.accessoryType;
+          }
+        });
+
         obj.matrixWorld.decompose(meshGroup.position, meshGroup.quaternion, meshGroup.scale);
         wireRoot.add(meshGroup);
         count++;
@@ -33997,16 +34006,47 @@ maioria <html lang="pt-BR">
       let selectedItemBbox = null;
       if (selectedAccessoryIds.size > 0 || selectedAccessoryId) {
         const selBox = new THREE.Box3();
+        activeGroup.updateMatrixWorld(true);
+        activeGroupWire.updateMatrixWorld(true);
+
+        // Busca prioritariamente no activeGroupWire (que representa o esqueleto exibido)
         activeGroupWire.traverse(obj => {
-          if (obj.isLineSegments || obj.isMesh) {
-            if (obj.userData) {
-              const sid = obj.userData.subPieceId || obj.userData.accessoryType;
+          if (obj.isMesh || obj.isLineSegments) {
+            let cur = obj;
+            let sid = null;
+            while (cur && cur !== activeGroupWire) {
+              if (cur.userData && (cur.userData.subPieceId || cur.userData.accessoryType)) {
+                sid = cur.userData.subPieceId || cur.userData.accessoryType;
+                break;
+              }
+              cur = cur.parent;
+            }
+            if (sid && (selectedAccessoryIds.has(sid) || selectedAccessoryId === sid)) {
+              selBox.expandByObject(obj);
+            }
+          }
+        });
+
+        // Fallback seguro no activeGroup se wire ainda estiver vazio
+        if (selBox.isEmpty()) {
+          activeGroup.traverse(obj => {
+            if (obj.isMesh) {
+              let cur = obj;
+              let sid = null;
+              while (cur && cur !== activeGroup) {
+                if (cur.userData && (cur.userData.subPieceId || cur.userData.accessoryType)) {
+                  sid = cur.userData.subPieceId || cur.userData.accessoryType;
+                  break;
+                }
+                cur = cur.parent;
+              }
               if (sid && (selectedAccessoryIds.has(sid) || selectedAccessoryId === sid)) {
                 selBox.expandByObject(obj);
               }
             }
-          }
-        });
+          });
+        }
+
         if (!selBox.isEmpty()) selectedItemBbox = selBox;
       }
       updateWireframeRuler(finalRealHeightMm, bbox, selectedItemBbox);
