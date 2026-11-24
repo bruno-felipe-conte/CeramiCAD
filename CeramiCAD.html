@@ -33112,29 +33112,73 @@ maioria <html lang="pt-BR">
     const wireRulerGroup = new THREE.Group();
     sceneWire.add(wireRulerGroup);
 
-    function createRulerTextSprite(text, fontSize = 28, textColor = '#181615', bgColor = null) {
+    function createRulerTextSprite(text, fontSize = 32, textColor = '#991b1b', bgColor = 'rgba(255, 245, 245, 0.96)', borderColor = '#e07a68') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (bgColor) {
+        // Tarja arredondada sem cortes com borda precisa
+        const padX = 12, padY = 16;
+        const w = canvas.width - padX * 2;
+        const h = canvas.height - padY * 2;
+        const r = 16;
+
+        ctx.fillStyle = bgColor;
+        ctx.beginPath();
+        ctx.moveTo(padX + r, padY);
+        ctx.lineTo(padX + w - r, padY);
+        ctx.quadraticCurveTo(padX + w, padY, padX + w, padY + r);
+        ctx.lineTo(padX + w, padY + h - r);
+        ctx.quadraticCurveTo(padX + w, padY + h, padX + w - r, padY + h);
+        ctx.lineTo(padX + r, padY + h);
+        ctx.quadraticCurveTo(padX, padY + h, padX, padY + h - r);
+        ctx.lineTo(padX, padY + r);
+        ctx.quadraticCurveTo(padX, padY, padX + r, padY);
+        ctx.closePath();
+        ctx.fill();
+
+        if (borderColor) {
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 4;
+          ctx.stroke();
+        }
+      }
+
+      ctx.font = 'bold ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = textColor;
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.minFilter = THREE.LinearFilter;
+      const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(44, 11, 1);
+      return sprite;
+    }
+
+    function createRulerNumberSprite(text) {
       const canvas = document.createElement('canvas');
       canvas.width = 128;
       canvas.height = 64;
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (bgColor) {
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(4, 8, canvas.width - 8, canvas.height - 16);
-      }
-
-      ctx.font = 'bold ' + fontSize + 'px monospace, sans-serif';
+      ctx.font = 'bold 30px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = textColor;
-      ctx.fillText(text, 10, canvas.height / 2);
+      ctx.fillStyle = '#5c534c';
+      ctx.fillText(text, 6, canvas.height / 2);
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.minFilter = THREE.LinearFilter;
       const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
       const sprite = new THREE.Sprite(mat);
-      sprite.scale.set(22, 11, 1);
+      sprite.scale.set(18, 9, 1);
       return sprite;
     }
 
@@ -33151,103 +33195,90 @@ maioria <html lang="pt-BR">
 
       if (!actualHeightMm || actualHeightMm < 5) return;
 
-      const rX = (bbox && Number.isFinite(bbox.min.x)) ? (bbox.min.x - 18) : -65;
-      const rZ = (bbox && Number.isFinite(bbox.max.z)) ? (bbox.max.z + 12) : 55;
-      const totalH = Math.max(10, actualHeightMm);
+      // Decide o alvo da medição: se há subpeça selecionada, usa o bounding box dela; senão, usa a peça toda
+      const targetBbox = (selectedItemBbox && !selectedItemBbox.isEmpty()) ? selectedItemBbox : bbox;
+      const isSubItem = Boolean(selectedItemBbox && !selectedItemBbox.isEmpty());
+      if (!targetBbox || targetBbox.isEmpty()) return;
+
+      const tMin = targetBbox.min;
+      const tMax = targetBbox.max;
+      const activeW = Math.max(1, tMax.x - tMin.x);
+      const activeH = isSubItem ? Math.max(1, tMax.y - tMin.y) : Math.max(10, actualHeightMm);
+
+      const rX = tMin.x - 16;
+      const rZ = tMax.z + 12;
 
       const linePos = [];
-      // Haste vertical principal da régua global
-      linePos.push(rX, 0, rZ, rX, totalH, rZ);
+
+      // =======================================================================
+      // 1. ÚNICA RÉGUA DE ALTURA (PADRÃO TÉCNICO VERMELHO TERRACOTA)
+      // =======================================================================
+      const baseY = isSubItem ? tMin.y : 0;
+      const topY = isSubItem ? tMax.y : activeH;
+
+      // Haste vertical
+      linePos.push(rX, baseY, rZ, rX, topY, rZ);
 
       // Traços de medição (marcas a cada 10mm / 1cm e marcas menores a cada 5mm)
-      for (let y = 0; y <= totalH; y += 5) {
-        const isCm = (y % 10 === 0);
-        const tickLen = isCm ? 6.5 : 3.5;
-        linePos.push(rX, y, rZ, rX + tickLen, y, rZ);
+      for (let yOff = 0; yOff <= (topY - baseY); yOff += 5) {
+        const curY = baseY + yOff;
+        const isCm = (yOff % 10 === 0);
+        const tickLen = isCm ? 6.0 : 3.2;
+        linePos.push(rX, curY, rZ, rX + tickLen, curY, rZ);
 
-        if (isCm && (y > 0 || totalH <= 40)) {
-          const cmVal = (y / 10).toFixed(0);
-          const sprite = createRulerTextSprite(cmVal + 'cm', 30, '#5c534c');
-          sprite.position.set(rX + tickLen + 10, y, rZ);
-          wireRulerGroup.add(sprite);
+        if (isCm && (yOff > 0 || (topY - baseY) <= 30)) {
+          const cmVal = (yOff / 10).toFixed(0);
+          const numSprite = createRulerNumberSprite(cmVal + 'cm');
+          numSprite.position.set(rX + tickLen + 9, curY, rZ);
+          wireRulerGroup.add(numSprite);
         }
       }
 
-      // Linha indicadora de topo com cota até o objeto
-      linePos.push(rX, totalH, rZ, rX + 14, totalH, rZ);
-      linePos.push(rX + 14, totalH, rZ, (bbox ? bbox.min.x : rX + 25), totalH, rZ);
+      // Linha indicadora de topo estendendo até a borda do objeto
+      linePos.push(rX, topY, rZ, rX + 12, topY, rZ);
+      linePos.push(rX + 12, topY, rZ, tMin.x, topY, rZ);
 
+      // Tarja de Altura nítida, ampla e centralizada sem corte
+      const hLabel = isSubItem ? 'Alt. Item: ' : 'Altura: ';
+      const hStr = hLabel + (activeH / 10).toFixed(1) + ' cm (' + activeH.toFixed(0) + ' mm)';
+      const topBadge = createRulerTextSprite(hStr, 34, '#991b1b', 'rgba(255, 245, 245, 0.98)', '#e07a68');
+      topBadge.scale.set(48, 12, 1);
+      topBadge.position.set(rX + 22, topY + 8, rZ);
+      wireRulerGroup.add(topBadge);
+
+      // =======================================================================
+      // 2. RÉGUA DE LARGURA (NO MESMO PADRÃO TÉCNICO VERMELHO TERRACOTA)
+      // =======================================================================
+      const wY = Math.max(1, baseY - 6);
+
+      // Haste horizontal
+      linePos.push(tMin.x, wY, rZ, tMax.x, wY, rZ);
+      // Limitadores nas pontas
+      linePos.push(tMin.x, wY - 4.5, rZ, tMin.x, wY + 4.5, rZ);
+      linePos.push(tMax.x, wY - 4.5, rZ, tMax.x, wY + 4.5, rZ);
+
+      // Traços graduados a cada 10mm (1cm) e 5mm na largura
+      for (let xOff = 0; xOff <= activeW; xOff += 5) {
+        const curX = tMin.x + xOff;
+        const isCm = (xOff % 10 === 0);
+        const tickLen = isCm ? 4.5 : 2.5;
+        linePos.push(curX, wY, rZ, curX, wY - tickLen, rZ);
+      }
+
+      // Linhas da régua em material vermelho técnico único
       const rulerGeo = new THREE.BufferGeometry();
       rulerGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePos, 3));
       const rulerMat = new THREE.LineBasicMaterial({ color: 0xd05840, linewidth: 2, depthTest: false });
       const rulerLines = new THREE.LineSegments(rulerGeo, rulerMat);
       wireRulerGroup.add(rulerLines);
 
-      // Etiqueta destacada no topo com altura final real em cm e mm
-      const totalCmStr = (totalH / 10).toFixed(1) + ' cm (' + totalH.toFixed(0) + ' mm)';
-      const topBadge = createRulerTextSprite(totalCmStr, 26, '#b91c1c', 'rgba(254, 242, 242, 0.95)');
-      topBadge.scale.set(38, 16, 1);
-      topBadge.position.set(rX + 22, totalH + 7, rZ);
-      wireRulerGroup.add(topBadge);
-
-      // =======================================================================
-      // RÉGUAS DINÂMICAS DE LARGURA E ALTURA (SELEÇÃO ESPECÍFICA OU PEÇA ATIVA)
-      // =======================================================================
-      const targetBbox = (selectedItemBbox && !selectedItemBbox.isEmpty()) ? selectedItemBbox : bbox;
-      const isSubItem = Boolean(selectedItemBbox && !selectedItemBbox.isEmpty());
-      if (targetBbox && !targetBbox.isEmpty()) {
-        const sMin = targetBbox.min;
-        const sMax = targetBbox.max;
-        const itemW = Math.max(1, sMax.x - sMin.x);
-        const itemH = Math.max(1, sMax.y - sMin.y);
-        const selZ = sMax.z + 10;
-        const selLines = [];
-
-        // 1. Régua de Largura Horizontal (Eixo X)
-        const wY = Math.max(2, sMin.y - 6);
-        selLines.push(sMin.x, wY, selZ, sMax.x, wY, selZ); // linha horizontal
-        selLines.push(sMin.x, wY - 4, selZ, sMin.x, wY + 4, selZ); // limitador esquerdo
-        selLines.push(sMax.x, wY - 4, selZ, sMax.x, wY + 4, selZ); // limitador direito
-        if (itemW >= 20) {
-          for (let xOff = 10; xOff < itemW; xOff += 10) {
-            selLines.push(sMin.x + xOff, wY - 2, selZ, sMin.x + xOff, wY + 2, selZ);
-          }
-        }
-
-        // 2. Régua de Altura Vertical Dedicada (Eixo Y)
-        const hX = sMax.x + 8;
-        selLines.push(hX, sMin.y, selZ, hX, sMax.y, selZ); // linha vertical
-        selLines.push(hX - 4, sMin.y, selZ, hX + 4, sMin.y, selZ); // limitador inferior
-        selLines.push(hX - 4, sMax.y, selZ, hX + 4, sMax.y, selZ); // limitador superior
-        if (itemH >= 20) {
-          for (let yOff = 10; yOff < itemH; yOff += 10) {
-            selLines.push(hX - 2, sMin.y + yOff, selZ, hX + 2, sMin.y + yOff, selZ);
-          }
-        }
-
-        const rulerColor = isSubItem ? 0x2563eb : 0x059669; // Azul se subpeça, Verde se peça completa
-        const selGeo = new THREE.BufferGeometry();
-        selGeo.setAttribute('position', new THREE.Float32BufferAttribute(selLines, 3));
-        const selMat = new THREE.LineBasicMaterial({ color: rulerColor, linewidth: 2.5, depthTest: false });
-        const selMesh = new THREE.LineSegments(selGeo, selMat);
-        wireRulerGroup.add(selMesh);
-
-        // Etiqueta de Largura
-        const wPrefix = isSubItem ? 'Largura Item: ' : 'Largura Total: ';
-        const wStr = wPrefix + (itemW / 10).toFixed(1) + 'cm (' + itemW.toFixed(0) + 'mm)';
-        const wBadge = createRulerTextSprite(wStr, 22, isSubItem ? '#1e40af' : '#065f46', isSubItem ? 'rgba(239, 246, 255, 0.95)' : 'rgba(236, 253, 245, 0.95)');
-        wBadge.scale.set(40, 15, 1);
-        wBadge.position.set((sMin.x + sMax.x) / 2, wY - 8, selZ);
-        wireRulerGroup.add(wBadge);
-
-        // Etiqueta de Altura Dedicada
-        const hPrefix = isSubItem ? 'Alt. Item: ' : 'Alt. Peça: ';
-        const hStr = hPrefix + (itemH / 10).toFixed(1) + 'cm (' + itemH.toFixed(0) + 'mm)';
-        const hBadge = createRulerTextSprite(hStr, 22, isSubItem ? '#1e40af' : '#065f46', isSubItem ? 'rgba(239, 246, 255, 0.95)' : 'rgba(236, 253, 245, 0.95)');
-        hBadge.scale.set(38, 15, 1);
-        hBadge.position.set(hX + 18, (sMin.y + sMax.y) / 2, selZ);
-        wireRulerGroup.add(hBadge);
-      }
+      // Tarja de Largura no mesmo padrão nítido e sem corte
+      const wLabel = isSubItem ? 'Largura Item: ' : 'Largura: ';
+      const wStr = wLabel + (activeW / 10).toFixed(1) + ' cm (' + activeW.toFixed(0) + ' mm)';
+      const wBadge = createRulerTextSprite(wStr, 34, '#991b1b', 'rgba(255, 245, 245, 0.98)', '#e07a68');
+      wBadge.scale.set(48, 12, 1);
+      wBadge.position.set((tMin.x + tMax.x) / 2, wY - 11, rZ);
+      wireRulerGroup.add(wBadge);
     }
 
     let isSyncing = false;
