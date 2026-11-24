@@ -33191,33 +33191,32 @@ maioria <html lang="pt-BR">
       wireRulerGroup.add(topBadge);
 
       // =======================================================================
-      // RÉGUAS EXCLUSIVAS PARA O ITEM / SUBPEÇA SELECIONADA (LARGURA E ALTURA)
+      // RÉGUAS DINÂMICAS DE LARGURA E ALTURA (SELEÇÃO ESPECÍFICA OU PEÇA ATIVA)
       // =======================================================================
-      if (selectedItemBbox && !selectedItemBbox.isEmpty()) {
-        const sMin = selectedItemBbox.min;
-        const sMax = selectedItemBbox.max;
+      const targetBbox = (selectedItemBbox && !selectedItemBbox.isEmpty()) ? selectedItemBbox : bbox;
+      const isSubItem = Boolean(selectedItemBbox && !selectedItemBbox.isEmpty());
+      if (targetBbox && !targetBbox.isEmpty()) {
+        const sMin = targetBbox.min;
+        const sMax = targetBbox.max;
         const itemW = Math.max(1, sMax.x - sMin.x);
         const itemH = Math.max(1, sMax.y - sMin.y);
-        const itemD = Math.max(1, sMax.z - sMin.z);
-
+        const selZ = sMax.z + 10;
         const selLines = [];
-        const selZ = sMax.z + 8; // posicionada logo à frente da subpeça
 
-        // 1. Régua de Largura (Eixo X) da subpeça
+        // 1. Régua de Largura Horizontal (Eixo X)
         const wY = Math.max(2, sMin.y - 6);
-        selLines.push(sMin.x, wY, selZ, sMax.x, wY, selZ); // barra horizontal
+        selLines.push(sMin.x, wY, selZ, sMax.x, wY, selZ); // linha horizontal
         selLines.push(sMin.x, wY - 4, selZ, sMin.x, wY + 4, selZ); // limitador esquerdo
         selLines.push(sMax.x, wY - 4, selZ, sMax.x, wY + 4, selZ); // limitador direito
-        // Ticks a cada 10mm se couber
         if (itemW >= 20) {
           for (let xOff = 10; xOff < itemW; xOff += 10) {
             selLines.push(sMin.x + xOff, wY - 2, selZ, sMin.x + xOff, wY + 2, selZ);
           }
         }
 
-        // 2. Régua de Altura (Eixo Y) exclusiva da subpeça
-        const hX = sMax.x + 8; // posicionada à direita da subpeça
-        selLines.push(hX, sMin.y, selZ, hX, sMax.y, selZ); // barra vertical
+        // 2. Régua de Altura Vertical Dedicada (Eixo Y)
+        const hX = sMax.x + 8;
+        selLines.push(hX, sMin.y, selZ, hX, sMax.y, selZ); // linha vertical
         selLines.push(hX - 4, sMin.y, selZ, hX + 4, sMin.y, selZ); // limitador inferior
         selLines.push(hX - 4, sMax.y, selZ, hX + 4, sMax.y, selZ); // limitador superior
         if (itemH >= 20) {
@@ -33226,24 +33225,27 @@ maioria <html lang="pt-BR">
           }
         }
 
+        const rulerColor = isSubItem ? 0x2563eb : 0x059669; // Azul se subpeça, Verde se peça completa
         const selGeo = new THREE.BufferGeometry();
         selGeo.setAttribute('position', new THREE.Float32BufferAttribute(selLines, 3));
-        const selMat = new THREE.LineBasicMaterial({ color: 0x1d4ed8, linewidth: 2.5, depthTest: false });
+        const selMat = new THREE.LineBasicMaterial({ color: rulerColor, linewidth: 2.5, depthTest: false });
         const selMesh = new THREE.LineSegments(selGeo, selMat);
         wireRulerGroup.add(selMesh);
 
-        // Etiqueta de Largura do Item Selecionado
-        const wStr = 'L: ' + (itemW / 10).toFixed(1) + 'cm (' + itemW.toFixed(0) + 'mm)';
-        const wBadge = createRulerTextSprite(wStr, 24, '#1d4ed8', 'rgba(239, 246, 255, 0.95)');
-        wBadge.scale.set(34, 14, 1);
+        // Etiqueta de Largura
+        const wPrefix = isSubItem ? 'Largura Item: ' : 'Largura Total: ';
+        const wStr = wPrefix + (itemW / 10).toFixed(1) + 'cm (' + itemW.toFixed(0) + 'mm)';
+        const wBadge = createRulerTextSprite(wStr, 22, isSubItem ? '#1e40af' : '#065f46', isSubItem ? 'rgba(239, 246, 255, 0.95)' : 'rgba(236, 253, 245, 0.95)');
+        wBadge.scale.set(40, 15, 1);
         wBadge.position.set((sMin.x + sMax.x) / 2, wY - 8, selZ);
         wireRulerGroup.add(wBadge);
 
-        // Etiqueta de Altura do Item Selecionado
-        const hStr = 'A: ' + (itemH / 10).toFixed(1) + 'cm (' + itemH.toFixed(0) + 'mm)';
-        const hBadge = createRulerTextSprite(hStr, 24, '#1d4ed8', 'rgba(239, 246, 255, 0.95)');
-        hBadge.scale.set(34, 14, 1);
-        hBadge.position.set(hX + 16, (sMin.y + sMax.y) / 2, selZ);
+        // Etiqueta de Altura Dedicada
+        const hPrefix = isSubItem ? 'Alt. Item: ' : 'Alt. Peça: ';
+        const hStr = hPrefix + (itemH / 10).toFixed(1) + 'cm (' + itemH.toFixed(0) + 'mm)';
+        const hBadge = createRulerTextSprite(hStr, 22, isSubItem ? '#1e40af' : '#065f46', isSubItem ? 'rgba(239, 246, 255, 0.95)' : 'rgba(236, 253, 245, 0.95)');
+        hBadge.scale.set(38, 15, 1);
+        hBadge.position.set(hX + 18, (sMin.y + sMax.y) / 2, selZ);
         wireRulerGroup.add(hBadge);
       }
     }
@@ -33678,6 +33680,17 @@ maioria <html lang="pt-BR">
       activeGroupWire.scale.set(1, 1, 1);
 
       p.buildSolid(activeGroup);
+      // Indexar subPieceId nos meshes para permitir seleção individual mesmo em peças sem accessoryType explícito
+      const pieceItems = getPieceSubItems(p);
+      let meshIdx = 0;
+      activeGroup.traverse(obj => {
+        if (obj.isMesh && (!obj.userData || (!obj.userData.subPieceId && !obj.userData.accessoryType))) {
+          if (!obj.userData) obj.userData = {};
+          const assignedId = (pieceItems[meshIdx] ? pieceItems[meshIdx].id : ('part_' + (meshIdx + 1)));
+          obj.userData.subPieceId = assignedId;
+          meshIdx++;
+        }
+      });
       applyUniversalExplosion(activeGroup, p);
       applyActiveMaterialToGroup(activeGroup);
       applySectionCutToGroup(activeGroup, isSectionCut);
@@ -33922,22 +33935,25 @@ maioria <html lang="pt-BR">
     });
 
     container.addEventListener('pointerup', (e) => {
+      handle3DClickSelection(e, container, camera, activeGroup);
+    });
+    function handle3DClickSelection(e, domContainer, currentCam, rootGroup) {
       const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
       if (dist > 6) return;
 
-      const rect = container.getBoundingClientRect();
+      const rect = domContainer.getBoundingClientRect();
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(activeGroup.children, true);
+      raycaster.setFromCamera(mouse, currentCam);
+      const intersects = raycaster.intersectObjects(rootGroup.children, true);
 
       let foundType = null;
       for (const hit of intersects) {
         let obj = hit.object;
-        while (obj && obj !== activeGroup) {
-          if (obj.userData && obj.userData.accessoryType) {
-            foundType = obj.userData.accessoryType;
+        while (obj && obj !== rootGroup) {
+          if (obj.userData && (obj.userData.subPieceId || obj.userData.accessoryType)) {
+            foundType = obj.userData.subPieceId || obj.userData.accessoryType;
             break;
           }
           obj = obj.parent;
@@ -33947,7 +33963,18 @@ maioria <html lang="pt-BR">
 
       if (foundType) selectAccessory(foundType);
       else deselectAccessory();
-    });
+    }
+
+    if (containerWire) {
+      containerWire.addEventListener('pointerdown', (e) => {
+        pointerDownPos.x = e.clientX;
+        pointerDownPos.y = e.clientY;
+      });
+      containerWire.addEventListener('pointerup', (e) => {
+        handle3DClickSelection(e, containerWire, cameraWire, activeGroupWire);
+      });
+    }
+
 
     function selectAccessory(type) {
       if (!type) return;
