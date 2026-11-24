@@ -348,23 +348,34 @@ maioria <html lang="pt-BR">
         <div id="selectionBadge" class="selection-badge">💡 Clique em um bico, alça ou tampa no 3D para mover</div>
         <div id="accDock" class="acc-dock" style="display:none;">
           <div class="acc-dock-header">
-            <span class="acc-dock-title" id="dockTitle">🎯 Acessório Selecionado</span>
+            <div class="flex items-center gap-1.5 overflow-hidden">
+              <span id="dockItemColorDot" class="w-2.5 h-2.5 rounded-full shrink-0 border border-white/20 bg-[#a3b8a8]"></span>
+              <span class="acc-dock-title truncate" id="dockTitle">🎯 Item Selecionado</span>
+            </div>
             <button class="dock-close-btn" onclick="deselectAccessory()" title="Fechar seleção (Esc)">✕</button>
           </div>
           <div class="acc-dock-body">
             <div class="dock-row">
-              <span class="dock-label">↔ Afastar:</span>
-              <button class="dock-btn" onclick="moveAcc('offset', -1)">◀ -1mm</button>
-              <span class="dock-val" id="dockValOffset">0mm</span>
-              <button class="dock-btn" onclick="moveAcc('offset', 1)">+1mm ▶</button>
+              <span class="dock-label">📐 Proporção:</span>
+              <button class="dock-btn" onclick="stepItemScale(-5)">-5%</button>
+              <input type="number" class="dock-input-cm !w-14" id="dockInputScale" min="30" max="300" step="1" value="100"
+                onchange="setItemScale(this.value)" />
+              <span class="text-[10px] text-gray-400">%</span>
+              <button class="dock-btn" onclick="stepItemScale(5)">+5%</button>
             </div>
             <div class="dock-row">
-              <span class="dock-label">↕ Altura:</span>
+              <span class="dock-label">↕ Altura Y:</span>
               <button class="dock-btn" onclick="moveAcc('height', -1)">▼</button>
               <input type="number" class="dock-input-cm" id="dockInputHeightCm" step="0.1" value="0.0"
                 onchange="setAccHeightCm(this.value)" />
               <span class="text-[10px] text-gray-400">cm</span>
               <button class="dock-btn" onclick="moveAcc('height', 1)">▲</button>
+            </div>
+            <div class="dock-row">
+              <span class="dock-label">↔ Posição:</span>
+              <button class="dock-btn" onclick="moveAcc('offset', -1)">◀ -1mm</button>
+              <span class="dock-val" id="dockValOffset">0mm</span>
+              <button class="dock-btn" onclick="moveAcc('offset', 1)">+1mm ▶</button>
             </div>
             <div class="dock-row">
               <span class="dock-label">⟲ Girar:</span>
@@ -373,8 +384,8 @@ maioria <html lang="pt-BR">
               <button class="dock-btn" onclick="moveAcc('angle', 5)">+5° ↻</button>
             </div>
             <div class="dock-footer">
-              <button class="dock-btn-reset" onclick="resetSelectedAcc()">↺ Reset</button>
-              <span class="dock-hint">Setas ou Q/E</span>
+              <button class="dock-btn-reset" onclick="resetSelectedAcc()">↺ Reset Item</button>
+              <span class="dock-hint">Setas / Q / E</span>
             </div>
           </div>
         </div>
@@ -520,17 +531,47 @@ maioria <html lang="pt-BR">
           </div>
         </label>
 
-        <div class="space-y-1.5">
-          <div class="flex items-center justify-between">
-            <label for="pieceHeightCmInput" class="text-xs text-gray-300">Altura Total</label>
-            <div class="flex items-center gap-1">
-              <input id="pieceHeightCmInput" type="number" step="0.5" min="2" max="80" value="10.0"
-                class="w-16 px-1.5 py-0.5 rounded bg-[#0e1013] border border-white/15 text-xs font-mono text-right text-[#a3b8a8]"
-                onchange="setPieceHeightCm(this.value)" />
-              <span class="text-[11px] text-gray-400">cm</span>
+        <div class="space-y-2">
+          <!-- Proporção Global da Peça Inteira (X = Y = Z) -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between">
+              <label for="pieceUniformScaleInput" class="text-xs text-gray-300 flex items-center gap-1">
+                <span>📐 Proporção Total</span>
+                <span id="badgePieceEdited" class="hidden text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold">AJUSTADO</span>
+              </label>
+              <div class="flex items-center gap-1">
+                <input id="pieceUniformScaleInput" type="number" step="1" min="30" max="250" value="100"
+                  class="w-16 px-1.5 py-0.5 rounded bg-[#0e1013] border border-white/15 text-xs font-mono text-right text-[#a3b8a8]"
+                  onchange="setPieceUniformScale(this.value)" />
+                <span class="text-[11px] text-gray-400">%</span>
+              </div>
             </div>
+            <input id="slider-scale-pct" type="range" min="30" max="250" step="1" value="100" class="w-full"
+              oninput="setPieceUniformScale(this.value)" />
           </div>
-          <input id="slider-height-cm" type="range" min="2" max="40" step="0.5" value="10" class="w-full" />
+
+          <!-- Altura Independente (Y) -->
+          <div class="space-y-1 pt-1 border-t border-white/5">
+            <div class="flex items-center justify-between">
+              <label for="pieceHeightCmInput" class="text-xs text-gray-300">Altura Independente (Y)</label>
+              <div class="flex items-center gap-1">
+                <input id="pieceHeightCmInput" type="number" step="0.5" min="2" max="80" value="10.0"
+                  class="w-16 px-1.5 py-0.5 rounded bg-[#0e1013] border border-white/15 text-xs font-mono text-right text-[#a3b8a8]"
+                  onchange="setPieceHeightCm(this.value)" />
+                <span class="text-[11px] text-gray-400">cm</span>
+              </div>
+            </div>
+            <input id="slider-height-cm" type="range" min="2" max="40" step="0.5" value="10" class="w-full" />
+          </div>
+
+          <!-- Lista de Subpeças e Acessórios com Legenda de Cores -->
+          <div class="pt-2 border-t border-white/5 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Subpeças & Itens</span>
+              <button onclick="resetCurrentPieceAdjustments()" class="text-[10px] text-gray-400 hover:text-amber-300 transition" title="Redefinir tamanho e ajustes deste modelo">↺ Reset Peça</button>
+            </div>
+            <div id="piece-items-list" class="space-y-1 max-h-36 overflow-y-auto custom-scroll pr-1"></div>
+          </div>
         </div>
       </section>
 
@@ -543,7 +584,15 @@ maioria <html lang="pt-BR">
     </div>
 
     <!-- Rodapé da Sidebar: Exportar STL & PDF -->
-    <div class="p-3.5 border-t border-white/10 bg-black/25 grid grid-cols-2 gap-2">
+    <div class="px-3.5 pt-2 pb-1 border-t border-white/10 bg-black/40 flex items-center justify-between text-[10.5px]">
+      <span class="text-gray-400">Ajustes Salvos:</span>
+      <div class="flex items-center gap-1.5">
+        <button onclick="exportSettingsJson()" class="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition" title="Baixar arquivo JSON com todos os ajustes de proporção">💾 Backup JSON</button>
+        <button onclick="document.getElementById('inputImportJson').click()" class="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition" title="Restaurar backup JSON">📂 Restaurar</button>
+        <input type="file" id="inputImportJson" accept=".json" class="hidden" onchange="importSettingsJson(event)" />
+      </div>
+    </div>
+    <div class="p-3.5 border-t border-white/5 bg-black/25 grid grid-cols-2 gap-2">
       <button id="btn-export-stl"
         class="py-2.5 px-3 rounded-xl bg-[#a3b8a8] hover:bg-[#b5c9ba] text-[#0e1013] font-semibold text-xs flex items-center justify-center gap-1.5 shadow-lg transition active:scale-[0.98]">
         <span>⬇</span> .STL 3D
@@ -630,6 +679,197 @@ maioria <html lang="pt-BR">
     function updateAccHeight(v) { accHeight = Number(v) || 0; if (typeof refreshCurrentPiece === 'function') refreshCurrentPiece(); }
     function updateAccAngle(v) { accAngle = Number(v) || 0; if (typeof refreshCurrentPiece === 'function') refreshCurrentPiece(); }
 
+    
+    // =========================================================================
+    // GERENCIAMENTO DE PROPORÇÕES, SUBPEÇAS, CORES 2D E PERSISTÊNCIA LOCALSTORAGE
+    // =========================================================================
+    let pieceUniformScale = 1.0; // Proporção uniforme da peça inteira (X = Y = Z)
+    const STORAGE_KEY_PREFIX = 'ceramicad_piece_cfg_';
+
+    // Paleta Pastel Técnica para Identificação Visual nos Moldes 2D
+    const PIECE_PALETTE = [
+      { fill: '#dbeafe', stroke: '#1d4ed8', border: '#bfdbfe', name: 'Azul Celeste' },
+      { fill: '#dcfce7', stroke: '#15803d', border: '#bbf7d0', name: 'Verde Sálvia' },
+      { fill: '#fef3c7', stroke: '#b45309', border: '#fde68a', name: 'Amarelo Mostarda' },
+      { fill: '#ffe4e6', stroke: '#be123c', border: '#fecdd3', name: 'Rosa Suave' },
+      { fill: '#f3e8ff', stroke: '#7e22ce', border: '#e9d5ff', name: 'Lilás Lavanda' },
+      { fill: '#ffedd5', stroke: '#c2410c', border: '#fed7aa', name: 'Laranja Terracota' },
+      { fill: '#ccfbf1', stroke: '#0f766e', border: '#99f6e4', name: 'Verde Menta' },
+      { fill: '#fae8ff', stroke: '#a21caf', border: '#f5d0fe', name: 'Fúcsia Pastel' },
+      { fill: '#e0e7ff', stroke: '#4338ca', border: '#c7d2fe', name: 'Azul Índigo' },
+      { fill: '#f1f5f9', stroke: '#475569', border: '#e2e8f0', name: 'Cinza Ardósia' }
+    ];
+
+    function getPieceColor(index) {
+      return PIECE_PALETTE[index % PIECE_PALETTE.length];
+    }
+
+    function getStorageKey(pieceCode) {
+      return STORAGE_KEY_PREFIX + (pieceCode || (PIECES[activeIdx] ? PIECES[activeIdx].code : '001'));
+    }
+
+    function loadSavedPieceConfig(pieceCode) {
+      try {
+        const raw = localStorage.getItem(getStorageKey(pieceCode));
+        if (raw) return JSON.parse(raw);
+      } catch (e) {
+        console.warn('Erro ao carregar do localStorage:', e);
+      }
+      return null;
+    }
+
+    function saveCurrentPieceConfig() {
+      const p = PIECES[activeIdx];
+      if (!p) return;
+      const cfg = {
+        code: p.code,
+        pieceUniformScale: Number(pieceUniformScale.toFixed(3)),
+        pieceHeightScale: Number(pieceHeightScale.toFixed(3)),
+        accTransforms: {}
+      };
+      Object.keys(accTransforms).forEach(k => {
+        const t = accTransforms[k];
+        if (t && (t.offset !== 0 || t.height !== 0 || t.angle !== 0 || (t.scale !== undefined && t.scale !== 1.0))) {
+          cfg.accTransforms[k] = {
+            offset: t.offset || 0,
+            height: t.height || 0,
+            angle: t.angle || 0,
+            scale: t.scale !== undefined ? Number(t.scale.toFixed(3)) : 1.0
+          };
+        }
+      });
+      try {
+        const isDefault = (cfg.pieceUniformScale === 1.0 && cfg.pieceHeightScale === 1.0 && Object.keys(cfg.accTransforms).length === 0);
+        if (isDefault) {
+          localStorage.removeItem(getStorageKey(p.code));
+        } else {
+          localStorage.setItem(getStorageKey(p.code), JSON.stringify(cfg));
+        }
+      } catch (e) {
+        console.warn('Erro ao salvar no localStorage:', e);
+      }
+      updateEditedBadge();
+    }
+
+    function updateEditedBadge() {
+      const p = PIECES[activeIdx];
+      const badge = document.getElementById('badgePieceEdited');
+      if (!p || !badge) return;
+      const isEdited = (pieceUniformScale !== 1.0 || Math.abs(pieceHeightScale - 1.0) > 0.01 || Object.values(accTransforms).some(t => t.offset !== 0 || t.height !== 0 || t.angle !== 0 || (t.scale && t.scale !== 1.0)));
+      badge.classList.toggle('hidden', !isEdited);
+      const btn = document.querySelector('.piece-btn[data-idx="' + activeIdx + '"]');
+      if (btn) {
+        let tag = btn.querySelector('.badge-edited-dot');
+        if (isEdited) {
+          if (!tag) {
+            const dot = document.createElement('span');
+            dot.className = 'badge-edited-dot w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 ml-1 inline-block';
+            dot.title = 'Ajustes personalizados salvos';
+            const codeEl = btn.querySelector('span');
+            if (codeEl) codeEl.appendChild(dot);
+          }
+        } else if (tag) {
+          tag.remove();
+        }
+      }
+    }
+
+    function resetCurrentPieceAdjustments() {
+      const p = PIECES[activeIdx];
+      if (!p) return;
+      try {
+        localStorage.removeItem(getStorageKey(p.code));
+      } catch (_) {}
+      pieceUniformScale = 1.0;
+      pieceHeightScale = 1.0;
+      Object.keys(accTransforms).forEach(k => {
+        accTransforms[k] = { offset: 0, height: 0, angle: 0, scale: 1.0 };
+      });
+      deselectAccessory();
+      refreshCurrentPiece();
+      showToast('Ajustes do modelo redefinidos.');
+    }
+
+    function exportSettingsJson() {
+      const allSettings = {};
+      PIECES.forEach(p => {
+        const raw = localStorage.getItem(getStorageKey(p.code));
+        if (raw) {
+          try { allSettings[p.code] = JSON.parse(raw); } catch (_) {}
+        }
+      });
+      const blob = new Blob([JSON.stringify(allSettings, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'CeramiCAD_Ajustes_Backup_' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Backup JSON exportado com sucesso!');
+    }
+
+    function importSettingsJson(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data && typeof data === 'object') {
+            let count = 0;
+            Object.keys(data).forEach(code => {
+              if (data[code]) {
+                localStorage.setItem(getStorageKey(code), JSON.stringify(data[code]));
+                count++;
+              }
+            });
+            showToast('Restaurados ajustes de ' + count + ' modelo(s)!');
+            selectPiece(activeIdx);
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('Erro ao importar arquivo JSON.');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    function setPieceUniformScale(val) {
+      const num = parseFloat(val);
+      if (!Number.isFinite(num)) return;
+      const pct = Math.max(30, Math.min(250, Math.round(num)));
+      pieceUniformScale = pct / 100.0;
+      const inp = document.getElementById('pieceUniformScaleInput');
+      const sld = document.getElementById('slider-scale-pct');
+      if (inp) inp.value = pct;
+      if (sld) sld.value = pct;
+      saveCurrentPieceConfig();
+      refreshCurrentPiece();
+    }
+
+    function setItemScale(val) {
+      if (!selectedAccessoryId) return;
+      const num = parseFloat(val);
+      if (!Number.isFinite(num)) return;
+      const pct = Math.max(30, Math.min(300, Math.round(num)));
+      const t = getAccT(selectedAccessoryId);
+      t.scale = pct / 100.0;
+      const inp = document.getElementById('dockInputScale');
+      if (inp) inp.value = pct;
+      saveCurrentPieceConfig();
+      refreshCurrentPiece();
+    }
+
+    function stepItemScale(delta) {
+      if (!selectedAccessoryId) return;
+      const t = getAccT(selectedAccessoryId);
+      const curPct = Math.round((t.scale !== undefined ? t.scale : 1.0) * 100);
+      setItemScale(curPct + delta);
+    }
+
     let selectedAccessoryId = null;
     const accTransforms = {
       handle: { offset: 0, height: 0, angle: 0 },
@@ -708,10 +948,16 @@ maioria <html lang="pt-BR">
       m.position.set(...pos);
       m.rotation.set(...rot);
       m.scale.set(...scale);
-      if (accType) m.userData.accessoryType = accType;
+      if (accType) {
+        m.userData.accessoryType = accType;
+        m.userData.subPieceId = accType;
+      }
       if (edgeAngle !== false && edgeAngle !== null && edgeAngle > 0) {
         const edge = new THREE.LineSegments(new THREE.EdgesGeometry(geo, edgeAngle), edgeMat);
-        if (accType) edge.userData.accessoryType = accType;
+        if (accType) {
+          edge.userData.accessoryType = accType;
+          edge.userData.subPieceId = accType;
+        }
         m.add(edge);
       }
       group.add(m);
@@ -1119,7 +1365,7 @@ maioria <html lang="pt-BR">
           <rect x="4" y="4" width="289" height="202" fill="none" stroke="#c7bfb5" stroke-width="0.35" stroke-dasharray="2,2"/>
           <rect x="4" y="4" width="289" height="9.5" fill="#efeae2" stroke="#c7bfb5" stroke-width="0.35"/>
           <text x="8" y="10.2" font-size="3.4" font-weight="700" fill="#2b2623">A4 #${sheetNum}/${totalSheets} (297×210mm • Escala 1:1) — ${code}. ${name}</text>
-          <text x="289" y="10.2" text-anchor="end" font-size="3.3" font-weight="600" fill="#9c422b">E=${thicknessMm.toFixed(1)}mm • r=12% (Cone 6)${Math.abs(pieceHeightScale - 1) > 0.005 ? ` • Alt. ×${pieceHeightScale.toFixed(2)}` : ''}</text>
+          <text x="289" y="10.2" text-anchor="end" font-size="3.3" font-weight="600" fill="#9c422b">E=${thicknessMm.toFixed(1)}mm • r=12% (Cone 6)${(typeof pieceUniformScale === 'number' && Math.abs(pieceUniformScale - 1) > 0.005) ? ` • Prop. ${Math.round(pieceUniformScale * 100)}%` : ''}${Math.abs(pieceHeightScale - 1) > 0.005 ? ` • Alt. ×${pieceHeightScale.toFixed(2)}` : ''}</text>
           <g transform="translate(8, 201)">
             <line x1="0" y1="0" x2="50" y2="0" stroke="#2b2623" stroke-width="0.6"/>
             <line x1="0" y1="-1.8" x2="0" y2="1.8" stroke="#2b2623" stroke-width="0.6"/>
@@ -1222,7 +1468,12 @@ maioria <html lang="pt-BR">
 
       return `
         <g>
-          <path d="${sectorPath(cx, cy, R, r, angleDeg, rotDeg)}" fill="#f3eadc" stroke="#181615" stroke-width="0.8"/>
+          ${(() => {
+            const col = resolveItemColor(info.title, 0);
+            return `<path d="${sectorPath(cx, cy, R, r, angleDeg, rotDeg)}" fill="${col.fill}" stroke="${col.stroke}" stroke-width="0.8"/>
+            <circle cx="${(labelX - 16).toFixed(1)}" cy="${(labelY - 4.2).toFixed(1)}" r="2.2" fill="${col.stroke}"/>
+            <text x="${(labelX - 16).toFixed(1)}" y="${(labelY - 3.2).toFixed(1)}" text-anchor="middle" font-size="2.2" font-weight="700" fill="#ffffff">#</text>`;
+          })()}
           <path d="${baseBevelSector}" fill="url(#slipDots)" stroke="#2d6a4f" stroke-width="0.35" stroke-dasharray="1.5,1"/>
           <path d="${radialBevelPath}" fill="url(#bevelHatch)" stroke="#c2593f" stroke-width="0.35" stroke-dasharray="1.5,1"/>
           <line x1="${(cx + (R + 2) * Math.cos(midA)).toFixed(1)}" y1="${(cy + (R + 2) * Math.sin(midA)).toFixed(1)}" x2="${(cx + (r - 2) * Math.cos(midA)).toFixed(1)}" y2="${(cy + (r - 2) * Math.sin(midA)).toFixed(1)}" stroke="#8c827a" stroke-width="0.35" stroke-dasharray="3,1.2,0.8,1.2"/>
@@ -1263,7 +1514,10 @@ maioria <html lang="pt-BR">
       const subY = isSmallDisk ? (cy + r + 5.2) : (cy + 3.6);
       return `
         <g>
-          <circle cx="${cx}" cy="${cy}" r="${r}" fill="#f3eadc" stroke="#181615" stroke-width="0.8"/>
+          ${(() => {
+            const col = resolveItemColor(info.title, 1);
+            return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${col.fill}" stroke="${col.stroke}" stroke-width="0.8"/>`;
+          })()}
           <circle cx="${cx}" cy="${cy}" r="${Math.max(2, r - wBevel)}" fill="#f3eadc" stroke="#c2593f" stroke-width="0.4" stroke-dasharray="1.5,1"/>
           <path d="M ${cx - r} ${cy} A ${r} ${r} 0 1 0 ${cx + r} ${cy} L ${cx + r - wBevel} ${cy} A ${r - wBevel} ${r - wBevel} 0 1 1 ${cx - r + wBevel} ${cy} Z" fill="url(#bevelHatch)" opacity="0.5"/>
           ${extras}
@@ -1279,7 +1533,8 @@ maioria <html lang="pt-BR">
       const hk = isHoriz ? 1.0 : k;
       h = h * hk;
 
-      let html = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#f3eadc" stroke="#181615" stroke-width="0.8"/>`;
+      const col = resolveItemColor(info.title, 2);
+      let html = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${col.fill}" stroke="${col.stroke}" stroke-width="0.8"/>`;
       if (info.bevelLeft) {
         const bw = info.bevelLeft;
         html += `<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="url(#bevelHatch)" stroke="#c2593f" stroke-width="0.35" stroke-dasharray="1.2,1"/>`;
@@ -32039,6 +32294,28 @@ maioria <html lang="pt-BR">
     // =========================================================================
     // 📄 DYNAMIC SHEET MANAGER — AUTO-PACKING & SPLIT TILING MOTOR A4 (CICLO 19)
     // =========================================================================
+    
+    function resolveItemColor(title, fallbackIndex) {
+      if (!title) return getPieceColor(fallbackIndex || 0);
+      const t = String(title).toLowerCase();
+
+      // Check for explicit numbering like "1.", "2.", "#1", "#2"
+      const numM = title.match(/(?:#|n[ºo]\s*|parte\s*|item\s*|^)(\d+)/i);
+      if (numM) {
+        const n = parseInt(numM[1], 10);
+        if (n >= 1 && n <= 20) return getPieceColor(n - 1);
+      }
+
+      // Check keywords for single piece sub-elements
+      if (t.includes('alça') || t.includes('asa') || t.includes('handle')) return getPieceColor(1);
+      if (t.includes('bico') || t.includes('spout') || t.includes('vertedor')) return getPieceColor(2);
+      if (t.includes('tampa') || t.includes('puxador') || t.includes('cúpula') || t.includes('lid')) return getPieceColor(3);
+      if (t.includes('fundo') || t.includes('pé') || t.includes('base') || t.includes('anel')) return getPieceColor(4);
+      if (t.includes('corpo') || t.includes('parede') || t.includes('cone') || t.includes('setor')) return getPieceColor(0);
+
+      return getPieceColor(fallbackIndex || 0);
+    }
+
     const DynamicSheetManager = {
       shiftPathD: function (d, tx, ty) {
         if (!d || (tx === 0 && ty === 0)) return d;
@@ -32308,8 +32585,9 @@ maioria <html lang="pt-BR">
         return { x: minX, y: minY, w: Math.max(10, maxX - minX), h: Math.max(10, maxY - minY) };
       },
 
-      process: function (rawSvg, piece, heightScale) {
+      process: function (rawSvg, piece, heightScale, uniformScale) {
         const k = typeof heightScale === 'number' ? heightScale : 1.0;
+        const u = typeof uniformScale === 'number' ? uniformScale : (typeof pieceUniformScale === 'number' ? pieceUniformScale : 1.0);
         const host = document.createElement('div');
         host.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:297mm;height:210mm;visibility:hidden;pointer-events:none;overflow:hidden;';
         host.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 297 210">${rawSvg}</svg>`;
@@ -32324,7 +32602,7 @@ maioria <html lang="pt-BR">
         });
 
         // 1. Preservação Sagrada do Layout Nominal Original (k == 1.0 ou ladrilhos)
-        const isNominalScale = Math.abs(k - 1.0) < 0.005;
+        const isNominalScale = Math.abs(k - 1.0) < 0.005 && Math.abs(u - 1.0) < 0.005;
         const isFlat = Boolean(
           piece.batch === 26 ||
           (piece.batch === 30 && (piece.sheets <= 2 || basePieceHeightMm <= 25)) ||
@@ -32368,15 +32646,37 @@ maioria <html lang="pt-BR">
 
             const textEl = it.querySelector('text');
             const title = textEl ? textEl.textContent.trim() : 'Placa';
-            allItems.push({
-              el: it.cloneNode(true),
-              title,
-              w: box.w,
-              h: box.h,
-              origX: box.x,
-              origY: box.y,
-              sIdx
-            });
+            const cloneEl = it.cloneNode(true);
+            let finalW = box.w;
+            let finalH = box.h;
+
+            // Se escala uniforme ou de subpeça for diferente de 1.0, escala o elemento SVG
+            if (Math.abs(u - 1.0) > 0.005) {
+              const gWrap = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+              gWrap.setAttribute('transform', 'scale(' + u.toFixed(3) + ')');
+              gWrap.appendChild(cloneEl);
+              finalW = box.w * u;
+              finalH = box.h * u;
+              allItems.push({
+                el: gWrap,
+                title,
+                w: finalW,
+                h: finalH,
+                origX: box.x * u,
+                origY: box.y * u,
+                sIdx
+              });
+            } else {
+              allItems.push({
+                el: cloneEl,
+                title,
+                w: finalW,
+                h: finalH,
+                origX: box.x,
+                origY: box.y,
+                sIdx
+              });
+            }
           });
         });
 
@@ -32619,10 +32919,11 @@ maioria <html lang="pt-BR">
         }
       },
 
-      render: function (svgEl, piece, heightScale) {
+      render: function (svgEl, piece, heightScale, uniformScale) {
         if (!svgEl || !piece || typeof piece.draw2D !== 'function') return;
+        const uScale = typeof uniformScale === 'number' ? uniformScale : (typeof pieceUniformScale === 'number' ? pieceUniformScale : 1.0);
         const rawSvg = piece.draw2D();
-        const res = this.process(rawSvg, piece, heightScale);
+        const res = this.process(rawSvg, piece, heightScale, uScale);
 
         piece.dynamicSheets = res.sheetCount;
         updateSheetFilterButtons(piece, res.sheetCount);
@@ -33113,7 +33414,7 @@ maioria <html lang="pt-BR">
         b.textContent = o.label;
         b.onclick = () => {
           activeSheetFilter = o.key;
-          DynamicSheetManager.render(svg, piece, pieceHeightScale);
+          DynamicSheetManager.render(svg, piece, pieceHeightScale, pieceUniformScale);
         };
         sheetFilterBar.appendChild(b);
       });
@@ -33252,9 +33553,22 @@ maioria <html lang="pt-BR">
         pieceHeightScale = 1.0;
       }
 
+      // Aplicar proporções individuais de subpeças e acessórios registrados
+      activeGroup.traverse(obj => {
+        if (obj.userData && (obj.userData.subPieceId || obj.userData.accessoryType)) {
+          const subId = obj.userData.subPieceId || obj.userData.accessoryType;
+          const t = getAccT(subId);
+          if (t && t.scale !== undefined && t.scale !== 1.0) {
+            obj.scale.multiplyScalar(t.scale);
+          }
+        }
+      });
+
       const plateCount = syncSkeletonFromActiveGroup(activeGroup, activeGroupWire, p);
-      activeGroup.scale.y = pieceHeightScale;
-      activeGroupWire.scale.y = pieceHeightScale;
+      activeGroup.scale.set(pieceUniformScale, pieceHeightScale * pieceUniformScale, pieceUniformScale);
+      activeGroupWire.scale.set(pieceUniformScale, pieceHeightScale * pieceUniformScale, pieceUniformScale);
+      renderPieceItemsList();
+      updateEditedBadge();
 
       const hCm = ((basePieceHeightMm * pieceHeightScale) / 10).toFixed(1);
       const hInput = document.getElementById('pieceHeightCmInput');
@@ -33270,7 +33584,7 @@ maioria <html lang="pt-BR">
         hSlider.disabled = isFlatTile;
       }
 
-      DynamicSheetManager.render(svg, p, pieceHeightScale);
+      DynamicSheetManager.render(svg, p, pieceHeightScale, pieceUniformScale);
 
       const scaleNote = Math.abs(pieceHeightScale - 1) > 0.01 ? ` • H=${hCm}cm` : '';
       if (badge3d) badge3d.textContent = `Parede E=${p.thicknessMm.toFixed(1)}mm • r=12%${scaleNote}`;
@@ -33378,13 +33692,29 @@ maioria <html lang="pt-BR">
       activeIdx = idx;
       activeSheetFilter = 'all';
       pieceHeightScale = 1.0;
+      pieceUniformScale = 1.0;
       deselectAccessory();
-      Object.keys(accTransforms).forEach(k => { accTransforms[k] = { offset: 0, height: 0, angle: 0 }; });
+      Object.keys(accTransforms).forEach(k => { accTransforms[k] = { offset: 0, height: 0, angle: 0, scale: 1.0 }; });
+
+      // Carregar configurações personalizadas salvas no localStorage
+      const piece = PIECES[idx];
+      const savedCfg = piece ? loadSavedPieceConfig(piece.code) : null;
+      if (savedCfg) {
+        if (Number.isFinite(savedCfg.pieceUniformScale)) pieceUniformScale = savedCfg.pieceUniformScale;
+        if (Number.isFinite(savedCfg.pieceHeightScale)) pieceHeightScale = savedCfg.pieceHeightScale;
+        if (savedCfg.accTransforms && typeof savedCfg.accTransforms === 'object') {
+          Object.keys(savedCfg.accTransforms).forEach(k => {
+            accTransforms[k] = Object.assign({ offset: 0, height: 0, angle: 0, scale: 1.0 }, savedCfg.accTransforms[k]);
+          });
+        }
+      }
+      const sInp = document.getElementById('pieceUniformScaleInput');
+      const sSld = document.getElementById('slider-scale-pct');
+      if (sInp) sInp.value = Math.round(pieceUniformScale * 100);
+      if (sSld) sSld.value = Math.round(pieceUniformScale * 100);
       isExploded = false;
       const tExp = document.getElementById('toggle-explode');
       if (tExp) tExp.checked = false;
-
-      const piece = PIECES[idx];
       if (window.history && window.history.replaceState) {
         try {
           const u = new URL(window.location);
@@ -33485,15 +33815,87 @@ maioria <html lang="pt-BR">
       refreshCurrentPiece();
     }
 
+    function getPieceSubItems(piece) {
+      if (!piece) return [];
+      const items = [];
+      const rawParts = piece.partsList || [];
+
+      // Detect sub-piece keys from partsList or accessories
+      const seenIds = new Set();
+      rawParts.forEach((partText, idx) => {
+        let cleanName = partText.replace(/^(?:Folha\s+A4\s*#\d+[:\s]*|Folha\s*#\d+[:\s]*|\d+×\s*)/i, '').trim();
+        const m = cleanName.match(/^([^(:\n]+)/);
+        const label = m ? m[1].trim() : cleanName;
+        const id = 'part_' + (idx + 1);
+        items.push({ id, label, idx, color: getPieceColor(idx) });
+        seenIds.add(id);
+      });
+
+      if (piece.defaultAcc && !seenIds.has(piece.defaultAcc)) {
+        items.push({ id: piece.defaultAcc, label: ACC_NAMES[piece.defaultAcc] || piece.defaultAcc, idx: items.length, color: getPieceColor(items.length) });
+      }
+
+      if (items.length === 0) {
+        items.push({ id: 'body', label: 'Corpo Principal', idx: 0, color: getPieceColor(0) });
+      }
+      return items;
+    }
+
+    function renderPieceItemsList() {
+      const container = document.getElementById('piece-items-list');
+      if (!container) return;
+      container.innerHTML = '';
+      const p = PIECES[activeIdx];
+      if (!p) return;
+
+      const items = getPieceSubItems(p);
+      items.forEach(it => {
+        const t = getAccT(it.id);
+        const isSelected = selectedAccessoryId === it.id;
+        const scalePct = Math.round((t.scale !== undefined ? t.scale : 1.0) * 100);
+        const hasCustom = (t.offset !== 0 || t.height !== 0 || t.angle !== 0 || scalePct !== 100);
+
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between p-1.5 rounded-lg border text-[11px] transition cursor-pointer ' +
+          (isSelected ? 'bg-white/10 border-[#a3b8a8]/60 text-white' : 'bg-white/[0.02] border-white/5 text-gray-300 hover:bg-white/[0.06]');
+
+        row.innerHTML = '<div class="flex items-center gap-1.5 truncate">' +
+          '<span class="w-2.5 h-2.5 rounded-full shrink-0 border" style="background-color: ' + it.color.fill + '; border-color: ' + it.color.stroke + '"></span>' +
+          '<span class="font-medium truncate">' + it.label + '</span>' +
+          '</div>' +
+          '<div class="flex items-center gap-1 shrink-0 font-mono text-[10px]">' +
+          (hasCustom ? '<span class="text-amber-400 font-bold">' + scalePct + '%</span>' : '<span class="text-gray-500">' + scalePct + '%</span>') +
+          '</div>';
+
+        row.onclick = () => {
+          selectAccessory(it.id);
+        };
+        container.appendChild(row);
+      });
+    }
+
     function updateDockValues() {
       if (!selectedAccessoryId) return;
       const t = getAccT(selectedAccessoryId);
       const elOff = document.getElementById('dockValOffset');
       const elHCm = document.getElementById('dockInputHeightCm');
       const elAng = document.getElementById('dockValAngle');
-      if (elOff) elOff.textContent = `${t.offset > 0 ? '+' : ''}${t.offset}mm`;
+      const elScale = document.getElementById('dockInputScale');
+      const elColorDot = document.getElementById('dockItemColorDot');
+
+      if (elOff) elOff.textContent = (t.offset > 0 ? '+' : '') + t.offset + 'mm';
       if (elHCm) elHCm.value = ((t.height || 0) / 10).toFixed(1);
-      if (elAng) elAng.textContent = `${t.angle}°`;
+      if (elAng) elAng.textContent = t.angle + '°';
+      if (elScale) elScale.value = Math.round((t.scale !== undefined ? t.scale : 1.0) * 100);
+
+      const p = PIECES[activeIdx];
+      const items = getPieceSubItems(p);
+      const itIdx = items.findIndex(it => it.id === selectedAccessoryId);
+      if (elColorDot) {
+        const color = getPieceColor(itIdx >= 0 ? itIdx : 0);
+        elColorDot.style.backgroundColor = color.fill;
+        elColorDot.style.borderColor = color.stroke;
+      }
     }
 
     function setAccHeightCm(val) {
@@ -33578,7 +33980,7 @@ maioria <html lang="pt-BR">
       if (hSlider) hSlider.value = Number(cmStr);
       const scaleNote = Math.abs(pieceHeightScale - 1) > 0.01 ? ` • H=${cmStr}cm` : '';
       if (badge3d && p) badge3d.textContent = `Parede E=${p.thicknessMm.toFixed(1)}mm • r=12%${scaleNote}`;
-      if (svg && p) DynamicSheetManager.render(svg, p, pieceHeightScale);
+      if (svg && p) DynamicSheetManager.render(svg, p, pieceHeightScale, pieceUniformScale);
     }
 
     function collectAllSheetSvgs() {
@@ -33586,7 +33988,7 @@ maioria <html lang="pt-BR">
       const prevFilter = activeSheetFilter;
       activeSheetFilter = 'all';
       const rawHtml = p.draw2D();
-      const res = DynamicSheetManager.process(rawHtml, p, pieceHeightScale);
+      const res = DynamicSheetManager.process(rawHtml, p, pieceHeightScale, pieceUniformScale);
       activeSheetFilter = prevFilter;
 
       const parser = document.createElement('div');
