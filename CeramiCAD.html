@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-maioria <html lang="pt-BR">
+<html lang="pt-BR">
 
 <head>
   <meta charset="UTF-8" />
@@ -33775,9 +33775,14 @@ maioria <html lang="pt-BR">
         if (ch.traverse) {
           ch.traverse(node => {
             if (node.geometry) node.geometry.dispose();
+            if (node.material) {
+              if (Array.isArray(node.material)) node.material.forEach(m => m.dispose());
+              else if (node.material.dispose) node.material.dispose();
+            }
           });
-        } else if (ch.geometry) {
-          ch.geometry.dispose();
+        } else {
+          if (ch.geometry) ch.geometry.dispose();
+          if (ch.material && ch.material.dispose) ch.material.dispose();
         }
         wireRoot.remove(ch);
       }
@@ -33883,7 +33888,21 @@ maioria <html lang="pt-BR">
           }`;
       });
 
-      while (activeGroup.children.length) activeGroup.remove(activeGroup.children[0]);
+      while (activeGroup.children.length) {
+        const ch = activeGroup.children[0];
+        if (ch.traverse) {
+          ch.traverse(node => {
+            if (node.geometry) node.geometry.dispose();
+            if (node.material && node.material !== clayOuterMat && node.material !== clayInnerMat && node.material !== claySelectedMat && node.material !== darkHoleMat) {
+              if (Array.isArray(node.material)) node.material.forEach(m => m.dispose && m.dispose());
+              else if (node.material.dispose) node.material.dispose();
+            }
+          });
+        } else if (ch.geometry) {
+          ch.geometry.dispose();
+        }
+        activeGroup.remove(ch);
+      }
       activeGroup.scale.set(1, 1, 1);
       activeGroupWire.scale.set(1, 1, 1);
 
@@ -34095,7 +34114,8 @@ maioria <html lang="pt-BR">
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z, 50);
       const fov = cam.fov * (Math.PI / 180);
-      const dist = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * offset;
+      const tanHalf = Math.tan(fov / 2);
+      const dist = (tanHalf > 0.0001 ? Math.abs(maxDim / 2 / tanHalf) : maxDim * 2) * offset;
 
       let pos;
       if (size.y < 25 && Math.max(size.x, size.z) > 40) {
