@@ -2,6 +2,93 @@
 <html lang="pt-BR">
 
 <head>
+
+  <!-- BLINDAGEM DE CÓDIGO E PROPRIEDADE INTELECTUAL -->
+  <script>
+    (function() {
+      'use strict';
+
+      // 1. Bloqueio de Menu de Contexto (Botão Direito)
+      document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }, { capture: true });
+
+      // 2. Bloqueio de Atalhos de Desenvolvedor e Cópia
+      window.addEventListener('keydown', function(e) {
+        // F12
+        if (e.keyCode === 123 || e.key === 'F12') {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+
+        const isCtrl = e.ctrlKey || e.metaKey;
+        const key = (e.key || '').toLowerCase();
+        const code = e.keyCode || 0;
+
+        // Ctrl+Shift+I (DevTools), Ctrl+Shift+J (Console), Ctrl+Shift+C (Inspecionar)
+        if (isCtrl && e.shiftKey && (key === 'i' || key === 'j' || key === 'c' || code === 73 || code === 74 || code === 67)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+
+        // Ctrl+U (Ver Código Fonte)
+        if (isCtrl && (key === 'u' || code === 85)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+
+        // Ctrl+S (Salvar Página como HTML)
+        if (isCtrl && (key === 's' || code === 83)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+
+        // Ctrl+P (Imprimir)
+        if (isCtrl && (key === 'p' || code === 80)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }, { capture: true });
+
+      // 3. Bloqueio de Arraste de Imagens, SVG e Canvas
+      document.addEventListener('dragstart', function(e) {
+        e.preventDefault();
+        return false;
+      }, { capture: true });
+
+      // 4. Armadilha Anti-Debugging contra DevTools aberto
+      function launchAntiDebug() {
+        const threshold = 160;
+        const widthDiff = window.outerWidth - window.innerWidth > threshold;
+        const heightDiff = window.outerHeight - window.innerHeight > threshold;
+        
+        if (widthDiff || heightDiff) {
+          (function triggerTrap() {
+            try {
+              (function() { return false; }['constructor']('debugger')());
+            } catch (_) {}
+          })();
+        }
+      }
+
+      setInterval(launchAntiDebug, 1000);
+
+      // Limpeza do console para dificultar scraping
+      setInterval(function() {
+        if (window.console && typeof window.console.clear === 'function') {
+          try { window.console.clear(); } catch (_) {}
+        }
+      }, 3000);
+    })();
+  </script>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CeramiCAD — Expositor 3D & Moldes A4 1:1 (247 Modelos • 46 Lotes)</title>
@@ -329,6 +416,22 @@
         height: 210mm;
         display: block;
       }
+    }
+  
+    /* BLINDAGEM CONTRA CÓPIA E INSPEÇÃO */
+    * {
+      -webkit-user-select: none !important;
+      -moz-user-select: none !important;
+      -ms-user-select: none !important;
+      user-select: none !important;
+      -webkit-user-drag: none !important;
+      -webkit-touch-callout: none !important;
+    }
+    input, textarea, select {
+      -webkit-user-select: text !important;
+      -moz-user-select: text !important;
+      -ms-user-select: text !important;
+      user-select: text !important;
     }
   </style>
 </head>
