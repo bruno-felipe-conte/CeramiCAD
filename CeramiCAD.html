@@ -33106,6 +33106,92 @@ maioria <html lang="pt-BR">
     const activeGroupWire = new THREE.Group();
     sceneWire.add(activeGroupWire);
 
+    // =========================================================================
+    // RÉGUA MILIMETRADA VERTICAL (FEEDBACK DE ALTURA REAL NO ESQUELETO 3D)
+    // =========================================================================
+    const wireRulerGroup = new THREE.Group();
+    sceneWire.add(wireRulerGroup);
+
+    function createRulerTextSprite(text, fontSize = 28, textColor = '#181615', bgColor = null) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (bgColor) {
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(4, 8, canvas.width - 8, canvas.height - 16);
+      }
+
+      ctx.font = 'bold ' + fontSize + 'px monospace, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = textColor;
+      ctx.fillText(text, 10, canvas.height / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.minFilter = THREE.LinearFilter;
+      const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(22, 11, 1);
+      return sprite;
+    }
+
+    function updateWireframeRuler(actualHeightMm, bbox) {
+      while (wireRulerGroup.children.length) {
+        const ch = wireRulerGroup.children[0];
+        if (ch.geometry) ch.geometry.dispose();
+        if (ch.material) {
+          if (ch.material.map) ch.material.map.dispose();
+          ch.material.dispose();
+        }
+        wireRulerGroup.remove(ch);
+      }
+
+      if (!actualHeightMm || actualHeightMm < 5) return;
+
+      const rX = (bbox && Number.isFinite(bbox.min.x)) ? (bbox.min.x - 18) : -65;
+      const rZ = (bbox && Number.isFinite(bbox.max.z)) ? (bbox.max.z + 12) : 55;
+      const totalH = Math.max(10, actualHeightMm);
+
+      const linePos = [];
+      // Haste vertical principal da régua
+      linePos.push(rX, 0, rZ, rX, totalH, rZ);
+
+      // Traços de medição (marcas a cada 10mm / 1cm e marcas menores a cada 5mm)
+      for (let y = 0; y <= totalH; y += 5) {
+        const isCm = (y % 10 === 0);
+        const tickLen = isCm ? 6.5 : 3.5;
+        linePos.push(rX, y, rZ, rX + tickLen, y, rZ);
+
+        if (isCm && (y > 0 || totalH <= 40)) {
+          const cmVal = (y / 10).toFixed(0);
+          const sprite = createRulerTextSprite(cmVal + 'cm', 30, '#5c534c');
+          sprite.position.set(rX + tickLen + 10, y, rZ);
+          wireRulerGroup.add(sprite);
+        }
+      }
+
+      // Linha indicadora de topo com cota até o objeto
+      linePos.push(rX, totalH, rZ, rX + 14, totalH, rZ);
+      linePos.push(rX + 14, totalH, rZ, (bbox ? bbox.min.x : rX + 25), totalH, rZ);
+
+      const rulerGeo = new THREE.BufferGeometry();
+      rulerGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePos, 3));
+      const rulerMat = new THREE.LineBasicMaterial({ color: 0xd05840, linewidth: 2, depthTest: false });
+      const rulerLines = new THREE.LineSegments(rulerGeo, rulerMat);
+      wireRulerGroup.add(rulerLines);
+
+      // Etiqueta destacada no topo com altura final real em cm e mm
+      const totalCmStr = (totalH / 10).toFixed(1) + ' cm (' + totalH.toFixed(0) + ' mm)';
+      const topBadge = createRulerTextSprite(totalCmStr, 26, '#b91c1c', 'rgba(254, 242, 242, 0.95)');
+      topBadge.scale.set(38, 16, 1);
+      topBadge.position.set(rX + 22, totalH + 7, rZ);
+      wireRulerGroup.add(topBadge);
+    }
+
+
     let isSyncing = false;
     function syncCameras(srcCam, srcCtrl, dstCam, dstCtrl) {
       if (isSyncing) return;
@@ -33588,7 +33674,9 @@ maioria <html lang="pt-BR">
 
       const scaleNote = Math.abs(pieceHeightScale - 1) > 0.01 ? ` • H=${hCm}cm` : '';
       if (badge3d) badge3d.textContent = `Parede E=${p.thicknessMm.toFixed(1)}mm • r=12%${scaleNote}`;
-      if (badgeWire) badgeWire.textContent = `(${plateCount} placas 3D sincronizadas)`;
+      const finalRealHeightMm = basePieceHeightMm * pieceHeightScale * pieceUniformScale;
+      updateWireframeRuler(finalRealHeightMm, bbox);
+      if (badgeWire) badgeWire.textContent = '(' + plateCount + ' placas 3D • Altura: ' + (finalRealHeightMm / 10).toFixed(1) + ' cm)';
 
       const infoName = document.getElementById('info-model-name');
       if (infoName) infoName.textContent = `${p.code}. ${p.shortName}`;
