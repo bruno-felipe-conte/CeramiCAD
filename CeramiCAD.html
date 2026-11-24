@@ -6841,26 +6841,36 @@ maioria <html lang="pt-BR">
     // 226: CONJUNTO 5 GARRAFAS & JARRAS RÚSTICAS EM DIFERENTES ARGILAS C/ CORTIÇA
     function buildRustic5JugsSolid(g, cut = isSectionCut) {
       const exp = isExploded ? 16 : 0;
-      const tL = getAccT('lid');
-      const tH = getAccT('handle');
-      const corkMat = selectedAccessoryId === 'lid'
-        ? claySelectedMat
-        : new THREE.MeshStandardMaterial({ color: 0xb88b5a, roughness: 0.92 });
 
-      const buildOneJug = (cfg) => {
+      const buildOneJug = (cfg, jugIdx) => {
+        const jugId = 'jug_' + jugIdx;
+        const lidId = 'lid_' + jugIdx;
+        const handleId = 'handle_' + jugIdx;
+        const tL = getAccT(lidId);
+        const tH = getAccT(handleId);
+
         const grp = new THREE.Group();
         grp.position.set(cfg.x + cfg.expX * exp, 0, cfg.z + cfg.expZ * exp);
-        const hMat = selectedAccessoryId === 'handle' ? claySelectedMat : clayOuterMat;
+        grp.userData.subPieceId = jugId;
+
+        const isSelLid = selectedAccessoryIds.has(lidId) || selectedAccessoryId === lidId;
+        const isSelHandle = selectedAccessoryIds.has(handleId) || selectedAccessoryId === handleId;
+        const corkMat = isSelLid
+          ? claySelectedMat
+          : new THREE.MeshStandardMaterial({ color: 0xb88b5a, roughness: 0.92 });
+        const hMat = isSelHandle ? claySelectedMat : clayOuterMat;
 
         const splitIdx = cfg.splitIdx || 3;
         const botPts = cfg.pts.slice(0, splitIdx + 1);
 
         const fullProf = buildVesselCrossSection(cfg.pts, 4.5, 5.5);
-        addMeshWithEdges(grp, buildThickRevolvedProfile(fullProf, 40), clayOuterMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 24);
+        const mainMesh = addMeshWithEdges(grp, buildThickRevolvedProfile(fullProf, 40), clayOuterMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 24);
+        mainMesh.userData.subPieceId = jugId;
 
         const botShell = botPts.map(([r, y]) => [r + 0.6, y]);
         const botProf = [...botShell, ...botPts.slice().reverse().map(([r, y]) => [r - 0.5, y])];
-        addMeshWithEdges(grp, buildThickRevolvedProfile(botProf, 40), clayInnerMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 28);
+        const innerMesh = addMeshWithEdges(grp, buildThickRevolvedProfile(botProf, 40), clayInnerMat, [0, 0, 0], [0, 0, 0], [1, 1, 1], 28);
+        innerMesh.userData.subPieceId = jugId;
 
         if (cfg.handleSide) {
           const s = cfg.handleSide;
@@ -6872,14 +6882,15 @@ maioria <html lang="pt-BR">
           ]);
           const hm = new THREE.Mesh(new THREE.TubeGeometry(hCurve, 28, 4.8, 10, false), hMat);
           hm.position.set(s * (tH.offset || 0), (tH.height || 0), 0);
-          hm.userData.accessoryType = 'handle';
+          hm.userData.accessoryType = handleId;
+          hm.userData.subPieceId = handleId;
           grp.add(hm);
         }
 
-        const isSelLid = selectedAccessoryId === 'lid';
         const cork = new THREE.Mesh(new THREE.CylinderGeometry(cfg.rNeck * 0.82, cfg.rNeck * 0.64, 22, 20), corkMat);
         cork.position.set(0, cfg.hTotal + 6 + exp * 0.7 + (tL.height || 0), (tL.offset || 0));
-        cork.userData.accessoryType = 'lid';
+        cork.userData.accessoryType = lidId;
+        cork.userData.subPieceId = lidId;
         cork.userData.isNonCeramic = !isSelLid;
         grp.add(cork);
 
@@ -6890,27 +6901,27 @@ maioria <html lang="pt-BR">
         x: -138, z: 4, expX: -0.5, expZ: 0,
         rNeck: 16, rMax: 56, rBot: 38, hTotal: 150, splitIdx: 3, handleSide: -1,
         pts: [[38, 0], [52, 26], [56, 52], [54, 62], [38, 98], [18, 134], [16, 150]]
-      });
+      }, 1);
       buildOneJug({
         x: -44, z: -88, expX: -0.2, expZ: -0.4,
         rNeck: 15, rMax: 46, rBot: 36, hTotal: 192, splitIdx: 2, handleSide: 0,
         pts: [[36, 0], [45, 38], [46, 74], [38, 120], [22, 162], [15, 192]]
-      });
+      }, 2);
       buildOneJug({
         x: -48, z: 88, expX: -0.1, expZ: 0.5,
         rNeck: 15, rMax: 48, rBot: 32, hTotal: 112, splitIdx: 2, handleSide: 0,
         pts: [[32, 0], [45, 22], [48, 42], [42, 72], [22, 98], [15, 112]]
-      });
+      }, 3);
       buildOneJug({
         x: 68, z: 54, expX: 0.35, expZ: 0.25,
         rNeck: 16, rMax: 48, rBot: 46, hTotal: 146, splitIdx: 2, handleSide: 0,
         pts: [[46, 0], [48, 36], [48, 66], [45, 92], [24, 126], [16, 146]]
-      });
+      }, 4);
       buildOneJug({
         x: 124, z: -64, expX: 0.5, expZ: -0.25,
         rNeck: 16, rMax: 50, rBot: 36, hTotal: 164, splitIdx: 2, handleSide: 1,
         pts: [[36, 0], [48, 32], [50, 56], [40, 102], [18, 146], [16, 164]]
-      });
+      }, 5);
     }
 
     // 227: CONJUNTO 4× DESCANSOS DE HASHI / TALHERES FORMATO PEIXE (Azul Cobalto c/ Escamas)
@@ -30995,6 +31006,13 @@ maioria <html lang="pt-BR">
         sheets: 10,
         heightMm: 192,
         desc: 'Conjunto de 5 jarras e garrafas rústicas (E=4.8mm) planificadas integralmente em 10 folhas A4 1:1 com cones desenvolvidos, paredes bipartidas do bojo, discos de fundo e alças.',
+        partsList: [
+          'Garrafa #1 (Bule Azul c/ Alça)',
+          'Garrafa #2 (Ânfora Alta Cinza)',
+          'Garrafa #3 (Mini Garrafa Verde)',
+          'Garrafa #4 (Jarra Cônica Mostarda)',
+          'Garrafa #5 (Oliva Elegante c/ Alça)'
+        ],
         buildSolid: (g) => buildRustic5JugsSolid(g, isSectionCut),
         draw2D: () => {
           // 1. #1 Azul (Ø76->112, h=52 -> R=171.20, r=116.17, 117.76deg; Ø112->32, h=98 -> R=148.19, r=42.34, 136.04deg)
@@ -33773,14 +33791,25 @@ maioria <html lang="pt-BR">
         m.needsUpdate = true;
       });
 
+      const hasSelection = (selectedAccessoryIds.size > 0 || Boolean(selectedAccessoryId));
+
       let count = 0;
       solidRoot.traverse(obj => {
         if (!obj.isMesh || !obj.geometry) return;
         if (obj.userData && obj.userData.isNonCeramic) return;
         if (piece && piece.batch === 26 && obj.geometry.type === 'BoxGeometry' && obj.position.y < -0.5) return;
 
+        const isSelectedObj = Boolean(obj.userData && (
+          (selectedAccessoryIds.has(obj.userData.subPieceId) || selectedAccessoryIds.has(obj.userData.accessoryType)) ||
+          (selectedAccessoryId && (obj.userData.subPieceId === selectedAccessoryId || obj.userData.accessoryType === selectedAccessoryId))
+        ));
+
+        // Se há itens selecionados, no esqueleto 3D apenas os itens selecionados devem aparecer
+        if (hasSelection && !isSelectedObj) {
+          return;
+        }
+
         let mat = wireOuterMat;
-        const isSelectedObj = Boolean(obj.userData && ((selectedAccessoryIds.has(obj.userData.subPieceId) || selectedAccessoryIds.has(obj.userData.accessoryType)) || (selectedAccessoryId && (obj.userData.subPieceId === selectedAccessoryId || obj.userData.accessoryType === selectedAccessoryId))));
         if (isSelectedObj || (obj.userData && obj.userData.accessoryType) || obj.material === claySelectedMat || obj.geometry.type === 'TubeGeometry') {
           mat = wireAccentMat;
         } else if (obj.material === clayInnerMat || obj.material === darkHoleMat) {
