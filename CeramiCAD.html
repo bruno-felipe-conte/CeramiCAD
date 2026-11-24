@@ -33671,7 +33671,8 @@ maioria <html lang="pt-BR">
         if (piece && piece.batch === 26 && obj.geometry.type === 'BoxGeometry' && obj.position.y < -0.5) return;
 
         let mat = wireOuterMat;
-        if ((obj.userData && obj.userData.accessoryType) || obj.material === claySelectedMat || obj.geometry.type === 'TubeGeometry') {
+        const isSelectedObj = Boolean(selectedAccessoryId && obj.userData && (obj.userData.subPieceId === selectedAccessoryId || obj.userData.accessoryType === selectedAccessoryId));
+        if (isSelectedObj || (obj.userData && obj.userData.accessoryType) || obj.material === claySelectedMat || obj.geometry.type === 'TubeGeometry') {
           mat = wireAccentMat;
         } else if (obj.material === clayInnerMat || obj.material === darkHoleMat) {
           mat = wireInnerMat;
@@ -33725,6 +33726,14 @@ maioria <html lang="pt-BR">
       applyUniversalExplosion(activeGroup, p);
       applyActiveMaterialToGroup(activeGroup);
       applySectionCutToGroup(activeGroup, isSectionCut);
+      // Destacar visualmente o objeto/subpeça selecionada com material selecionado
+      if (selectedAccessoryId) {
+        activeGroup.traverse(obj => {
+          if (obj.isMesh && obj.userData && (obj.userData.subPieceId === selectedAccessoryId || obj.userData.accessoryType === selectedAccessoryId)) {
+            obj.material = claySelectedMat;
+          }
+        });
+      }
       activeGroup.traverse(obj => {
         if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
       });
@@ -34010,16 +34019,21 @@ maioria <html lang="pt-BR">
     function selectAccessory(type) {
       if (!type) return;
       selectedAccessoryId = type;
+      const p = PIECES[activeIdx];
+      const items = getPieceSubItems(p);
+      const matched = items.find(it => it.id === type);
+      const displayName = matched ? matched.label : (ACC_NAMES[type] || type);
+
       const badge = document.getElementById('selectionBadge');
       if (badge) {
         badge.classList.add('active');
-        badge.textContent = `🎯 ${ACC_NAMES[type] || type} — Setas para mover • Q/E para girar • Esc`;
+        badge.textContent = '🎯 ' + displayName + ' — Setas para mover • Q/E para girar • Esc';
       }
       const dock = document.getElementById('accDock');
       if (dock) {
         dock.style.display = 'flex';
         const titleEl = document.getElementById('dockTitle');
-        if (titleEl) titleEl.textContent = `🎯 ${ACC_NAMES[type] || type}`;
+        if (titleEl) titleEl.textContent = '🎯 ' + displayName;
         updateDockValues();
       }
       refreshCurrentPiece();
