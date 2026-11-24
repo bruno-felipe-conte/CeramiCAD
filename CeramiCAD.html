@@ -33139,19 +33139,19 @@ maioria <html lang="pt-BR">
     const wireRulerGroup = new THREE.Group();
     sceneWire.add(wireRulerGroup);
 
-    function createRulerTextSprite(text, fontSize = 32, textColor = '#991b1b', bgColor = 'rgba(255, 245, 245, 0.96)', borderColor = '#e07a68') {
+    function createRulerTextSprite(text, fontSize = 38, textColor = '#991b1b', bgColor = 'rgba(255, 248, 248, 0.98)', borderColor = '#e07a68') {
       const canvas = document.createElement('canvas');
-      canvas.width = 512;
-      canvas.height = 128;
+      canvas.width = 1024;
+      canvas.height = 192;
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (bgColor) {
-        // Tarja arredondada sem cortes com borda precisa
-        const padX = 12, padY = 16;
+        // Tarja arredondada nítida, ampla e sem cortes
+        const padX = 16, padY = 20;
         const w = canvas.width - padX * 2;
         const h = canvas.height - padY * 2;
-        const r = 16;
+        const r = 24;
 
         ctx.fillStyle = bgColor;
         ctx.beginPath();
@@ -33169,12 +33169,12 @@ maioria <html lang="pt-BR">
 
         if (borderColor) {
           ctx.strokeStyle = borderColor;
-          ctx.lineWidth = 4;
+          ctx.lineWidth = 6;
           ctx.stroke();
         }
       }
 
-      ctx.font = 'bold ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif';
+      ctx.font = 'bold ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = textColor;
@@ -33184,28 +33184,28 @@ maioria <html lang="pt-BR">
       texture.minFilter = THREE.LinearFilter;
       const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
       const sprite = new THREE.Sprite(mat);
-      sprite.scale.set(44, 11, 1);
+      sprite.scale.set(64, 12, 1);
       return sprite;
     }
 
     function createRulerNumberSprite(text) {
       const canvas = document.createElement('canvas');
-      canvas.width = 128;
-      canvas.height = 64;
+      canvas.width = 256;
+      canvas.height = 128;
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.font = 'bold 30px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif';
+      ctx.font = 'bold 44px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#5c534c';
-      ctx.fillText(text, 6, canvas.height / 2);
+      ctx.fillText(text, 12, canvas.height / 2);
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.minFilter = THREE.LinearFilter;
       const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
       const sprite = new THREE.Sprite(mat);
-      sprite.scale.set(18, 9, 1);
+      sprite.scale.set(22, 11, 1);
       return sprite;
     }
 
@@ -33269,9 +33269,9 @@ maioria <html lang="pt-BR">
       const countSel = selectedAccessoryIds.size;
       const hLabel = isSubItem ? (countSel > 1 ? ('Alt. Grupo (' + countSel + 'pçs): ') : 'Alt. Item: ') : 'Altura: ';
       const hStr = hLabel + (activeH / 10).toFixed(1) + ' cm (' + activeH.toFixed(0) + ' mm)';
-      const topBadge = createRulerTextSprite(hStr, 34, '#991b1b', 'rgba(255, 245, 245, 0.98)', '#e07a68');
-      topBadge.scale.set(48, 12, 1);
-      topBadge.position.set(rX + 22, topY + 8, rZ);
+      const topBadge = createRulerTextSprite(hStr, 38, '#991b1b', 'rgba(255, 248, 248, 0.98)', '#e07a68');
+      topBadge.scale.set(64, 12, 1);
+      topBadge.position.set(rX + 26, topY + 8, rZ);
       wireRulerGroup.add(topBadge);
 
       // =======================================================================
@@ -33303,8 +33303,8 @@ maioria <html lang="pt-BR">
       // Tarja de Largura no mesmo padrão nítido e sem corte
       const wLabel = isSubItem ? (countSel > 1 ? ('Largura Grupo (' + countSel + 'pçs): ') : 'Largura Item: ') : 'Largura: ';
       const wStr = wLabel + (activeW / 10).toFixed(1) + ' cm (' + activeW.toFixed(0) + ' mm)';
-      const wBadge = createRulerTextSprite(wStr, 34, '#991b1b', 'rgba(255, 245, 245, 0.98)', '#e07a68');
-      wBadge.scale.set(48, 12, 1);
+      const wBadge = createRulerTextSprite(wStr, 38, '#991b1b', 'rgba(255, 248, 248, 0.98)', '#e07a68');
+      wBadge.scale.set(64, 12, 1);
       wBadge.position.set((tMin.x + tMax.x) / 2, wY - 11, rZ);
       wireRulerGroup.add(wBadge);
     }
@@ -33799,9 +33799,12 @@ maioria <html lang="pt-BR">
         if (obj.userData && obj.userData.isNonCeramic) return;
         if (piece && piece.batch === 26 && obj.geometry.type === 'BoxGeometry' && obj.position.y < -0.5) return;
 
-        const isSelectedObj = Boolean(obj.userData && (
-          (selectedAccessoryIds.has(obj.userData.subPieceId) || selectedAccessoryIds.has(obj.userData.accessoryType)) ||
-          (selectedAccessoryId && (obj.userData.subPieceId === selectedAccessoryId || obj.userData.accessoryType === selectedAccessoryId))
+        const objSubId = obj.userData ? (obj.userData.subPieceId || obj.userData.accessoryType) : null;
+        const isSelectedObj = Boolean(objSubId && (
+          selectedAccessoryIds.has(objSubId) ||
+          selectedAccessoryId === objSubId ||
+          (selectedAccessoryIds.has(obj.userData.accessoryType) && !obj.userData.subPieceId) ||
+          (selectedAccessoryId === obj.userData.accessoryType && !obj.userData.subPieceId)
         ));
 
         // Se há itens selecionados, no esqueleto 3D apenas os itens selecionados devem aparecer
@@ -33876,17 +33879,46 @@ maioria <html lang="pt-BR">
       activeGroupWire.scale.set(1, 1, 1);
 
       p.buildSolid(activeGroup);
-      // Indexar subPieceId nos meshes para permitir seleção individual mesmo em peças sem accessoryType explícito
-      const pieceItems = getPieceSubItems(p);
-      let meshIdx = 0;
+
+      // =========================================================================
+      // DESAMBIGUAÇÃO UNIVERSAL DE SUBPEÇAS, TAMPAS E ROLHAS EM TODOS OS MODELOS/LOTES
+      // Garante que cada objeto físico (tampa, rolha, garrafa, asa) tenha um ID exclusivo
+      // =========================================================================
+      const accTypeCounts = {};
       activeGroup.traverse(obj => {
-        if (obj.isMesh && (!obj.userData || (!obj.userData.subPieceId && !obj.userData.accessoryType))) {
-          if (!obj.userData) obj.userData = {};
-          const assignedId = (pieceItems[meshIdx] ? pieceItems[meshIdx].id : ('part_' + (meshIdx + 1)));
-          obj.userData.subPieceId = assignedId;
-          meshIdx++;
+        if (obj.isMesh && obj.userData && obj.userData.accessoryType) {
+          const t = obj.userData.accessoryType;
+          accTypeCounts[t] = (accTypeCounts[t] || 0) + 1;
         }
       });
+
+      const accTypeInstances = {};
+      const pieceItems = getPieceSubItems(p);
+      let autoMeshIdx = 0;
+
+      activeGroup.traverse(obj => {
+        if (!obj.isMesh) return;
+        if (!obj.userData) obj.userData = {};
+
+        const rawAcc = obj.userData.accessoryType;
+        if (rawAcc && accTypeCounts[rawAcc] > 1) {
+          // Mais de uma rolha/tampa/alça compartilha o mesmo accessoryType (ex: 'lid' em petisqueiras duplas 230, trios, etc.)
+          accTypeInstances[rawAcc] = (accTypeInstances[rawAcc] || 0) + 1;
+          const instNum = accTypeInstances[rawAcc];
+          const disambiguatedId = rawAcc + '_' + instNum;
+          obj.userData.subPieceId = disambiguatedId;
+          obj.userData.instanceLabel = (ACC_NAMES[rawAcc] || rawAcc) + ' #' + instNum;
+        } else if (!obj.userData.subPieceId) {
+          if (rawAcc) {
+            obj.userData.subPieceId = rawAcc;
+          } else {
+            const assigned = (pieceItems[autoMeshIdx] ? pieceItems[autoMeshIdx].id : ('part_' + (autoMeshIdx + 1)));
+            obj.userData.subPieceId = assigned;
+            autoMeshIdx++;
+          }
+        }
+      });
+
       applyUniversalExplosion(activeGroup, p);
       applyActiveMaterialToGroup(activeGroup);
       applySectionCutToGroup(activeGroup, isSectionCut);
@@ -33895,7 +33927,13 @@ maioria <html lang="pt-BR">
         activeGroup.traverse(obj => {
           if (obj.isMesh && obj.userData) {
             const sid = obj.userData.subPieceId || obj.userData.accessoryType;
-            if (sid && (selectedAccessoryIds.has(sid) || selectedAccessoryId === sid)) {
+            const isMatch = Boolean(sid && (
+              selectedAccessoryIds.has(sid) ||
+              selectedAccessoryId === sid ||
+              (selectedAccessoryIds.has(obj.userData.accessoryType) && !obj.userData.subPieceId) ||
+              (selectedAccessoryId === obj.userData.accessoryType && !obj.userData.subPieceId)
+            ));
+            if (isMatch) {
               obj.material = claySelectedMat;
             }
           }
@@ -34162,9 +34200,15 @@ maioria <html lang="pt-BR">
       for (const hit of intersects) {
         let obj = hit.object;
         while (obj && obj !== rootGroup) {
-          if (obj.userData && (obj.userData.subPieceId || obj.userData.accessoryType)) {
-            foundType = obj.userData.subPieceId || obj.userData.accessoryType;
-            break;
+          if (obj.userData) {
+            // Prioridade máxima e estrita para o subPieceId desambiguado da instância
+            if (obj.userData.subPieceId) {
+              foundType = obj.userData.subPieceId;
+              break;
+            } else if (obj.userData.accessoryType) {
+              foundType = obj.userData.accessoryType;
+              break;
+            }
           }
           obj = obj.parent;
         }
@@ -34261,6 +34305,25 @@ maioria <html lang="pt-BR">
         items.push({ id, label, idx, color: getPieceColor(idx) });
         seenIds.add(id);
       });
+
+      // Se o activeGroup estiver montado com instâncias desambiguadas (ex: rolha_1, rolha_2), inclui-as na lista
+      if (typeof activeGroup !== 'undefined' && activeGroup && activeGroup.children.length > 0) {
+        const foundSubIds = new Map();
+        activeGroup.traverse(obj => {
+          if (obj.isMesh && obj.userData && obj.userData.subPieceId) {
+            const sid = obj.userData.subPieceId;
+            if (!seenIds.has(sid) && !foundSubIds.has(sid)) {
+              let lbl = obj.userData.instanceLabel || (ACC_NAMES[sid] || ACC_NAMES[obj.userData.accessoryType] || sid);
+              foundSubIds.set(sid, lbl);
+            }
+          }
+        });
+
+        foundSubIds.forEach((lbl, sid) => {
+          items.push({ id: sid, label: lbl, idx: items.length, color: getPieceColor(items.length) });
+          seenIds.add(sid);
+        });
+      }
 
       if (piece.defaultAcc && !seenIds.has(piece.defaultAcc)) {
         items.push({ id: piece.defaultAcc, label: ACC_NAMES[piece.defaultAcc] || piece.defaultAcc, idx: items.length, color: getPieceColor(items.length) });
