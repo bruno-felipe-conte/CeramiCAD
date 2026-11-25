@@ -1916,7 +1916,37 @@
       return out;
     }
 
-    function bendSlabToCylinder(flatGeo, slabW, slabH, rBottom, rTop, radialOffset = 0, clampSeam = true, maxDx = 14.0, maxPasses = 2) {
+    function smoothCylinderNormals(geo) {
+      const pos = geo.attributes.position;
+      const norm = geo.attributes.normal;
+      const count = pos.count;
+      for (let i = 0; i < count; i += 3) {
+        const ax = pos.getX(i), ay = pos.getY(i), az = pos.getZ(i);
+        const bx = pos.getX(i+1), by = pos.getY(i+1), bz = pos.getZ(i+1);
+        const cx = pos.getX(i+2), cy = pos.getY(i+2), cz = pos.getZ(i+2);
+        const e1x = bx - ax, e1y = by - ay, e1z = bz - az;
+        const e2x = cx - ax, e2y = cy - ay, e2z = cz - az;
+        const fnx = e1y * e2z - e1z * e2y, fny = e1z * e2x - e1x * e2z, fnz = e1x * e2y - e1y * e2x;
+        const fnLen = Math.hypot(fnx, fny, fnz) || 1;
+        const nx = fnx / fnLen, ny = fny / fnLen, nz = fnz / fnLen;
+        for (let k = 0; k < 3; k++) {
+          const vx = pos.getX(i + k), vz = pos.getZ(i + k);
+          const vr = Math.hypot(vx, vz) || 1;
+          const radX = vx / vr, radZ = vz / vr;
+          const dotRad = nx * radX + nz * radZ;
+          if (dotRad > 0.35) {
+            norm.setXYZ(i + k, radX, 0, radZ);
+          } else if (dotRad < -0.35) {
+            norm.setXYZ(i + k, -radX, 0, -radZ);
+          } else {
+            norm.setXYZ(i + k, nx, ny, nz);
+          }
+        }
+      }
+      norm.needsUpdate = true;
+    }
+
+    function bendSlabToCylinder(flatGeo, slabW, slabH, rBottom, rTop, radialOffset = 0, clampSeam = true, maxDx = 6.0, maxPasses = 4) {
       const geo = subdivideGeometryX(flatGeo, maxDx, maxPasses);
       const pos = geo.getAttribute('position');
       const uvs = new Float32Array(pos.count * 2);
@@ -1944,6 +1974,7 @@
       geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
       pos.needsUpdate = true;
       geo.computeVertexNormals();
+      smoothCylinderNormals(geo);
       return geo;
     }
 
@@ -21321,7 +21352,7 @@
 
           const wallGeo = bendSlabToCylinder(flatGeo, slabW, H, rBot, rTop, 0, true);
           flatGeo.dispose();
-          addMeshWithEdges(g, wallGeo, terracottaMat, [0, 6, 0], [0, 0, 0], [1, 1, 1], 30);
+          addMeshWithEdges(g, wallGeo, terracottaMat, [0, 6, 0], [0, 0, 0], [1, 1, 1], false);
 
           // 2. Base Monolítica Circular
           addMeshWithEdges(g, new THREE.CylinderGeometry(rBot + 4, rBot + 4, 6, 36), terracottaDarkMat, [0, 3, 0], [0, 0, 0], [1, 1, 1], 36);
@@ -21345,7 +21376,7 @@
             const ovGeo = bendSlabToCylinder(flatOv, slabW, H, rBot, rTop, wallT + 0.25, false);
             flatOv.dispose();
 
-            const m = addMeshWithEdges(g, ovGeo, stairsMat, [expVec[0], 6 + expVec[1], expVec[2]], [0, 0, 0], [1, 1, 1], 28);
+            const m = addMeshWithEdges(g, ovGeo, stairsMat, [expVec[0], 6 + expVec[1], expVec[2]], [0, 0, 0], [1, 1, 1], false);
             if (ov.type === 'staircase') m.userData.accessoryType = 'stairs';
           }
 
@@ -21553,7 +21584,7 @@
 
           const wallGeo = bendSlabToCylinder(flatGeo, slabW, H, rBot, rTop, 0, true);
           flatGeo.dispose();
-          addMeshWithEdges(g, wallGeo, terracottaMat, [0, 6, 0], [0, 0, 0], [1, 1, 1], 30);
+          addMeshWithEdges(g, wallGeo, terracottaMat, [0, 6, 0], [0, 0, 0], [1, 1, 1], false);
 
           addMeshWithEdges(g, new THREE.CylinderGeometry(rBot + 4, rBot + 4, 6, 36), terracottaDarkMat, [0, 3, 0], [0, 0, 0], [1, 1, 1], 36);
 
@@ -21575,7 +21606,7 @@
             const ovGeo = bendSlabToCylinder(flatOv, slabW, H, rBot, rTop, wallT + 0.25, false);
             flatOv.dispose();
 
-            const m = addMeshWithEdges(g, ovGeo, stairsMat, [expVec[0], 6 + expVec[1], expVec[2]], [0, 0, 0], [1, 1, 1], 28);
+            const m = addMeshWithEdges(g, ovGeo, stairsMat, [expVec[0], 6 + expVec[1], expVec[2]], [0, 0, 0], [1, 1, 1], false);
             if (ov.type === 'staircase') m.userData.accessoryType = 'stairs';
           }
 
@@ -21765,7 +21796,7 @@
 
           const wallGeo = bendSlabToCylinder(flatGeo, slabW, H, rBot, rTop, 0, true);
           flatGeo.dispose();
-          addMeshWithEdges(g, wallGeo, terracottaMat, [0, 6, 0], [0, 0, 0], [1, 1, 1], 30);
+          addMeshWithEdges(g, wallGeo, terracottaMat, [0, 6, 0], [0, 0, 0], [1, 1, 1], false);
 
           addMeshWithEdges(g, new THREE.CylinderGeometry(rBot + 4, rBot + 4, 6, 36), terracottaDarkMat, [0, 3, 0], [0, 0, 0], [1, 1, 1], 36);
 
@@ -21787,7 +21818,7 @@
             const ovGeo = bendSlabToCylinder(flatOv, slabW, H, rBot, rTop, wallT + 0.25, false);
             flatOv.dispose();
 
-            const m = addMeshWithEdges(g, ovGeo, stairsMat, [expVec[0], 6 + expVec[1], expVec[2]], [0, 0, 0], [1, 1, 1], 28);
+            const m = addMeshWithEdges(g, ovGeo, stairsMat, [expVec[0], 6 + expVec[1], expVec[2]], [0, 0, 0], [1, 1, 1], false);
             if (ov.type === 'staircase') m.userData.accessoryType = 'stairs';
           }
 
