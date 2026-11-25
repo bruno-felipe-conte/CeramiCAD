@@ -1437,7 +1437,17 @@
           .forEach(([a, b]) => targetEdges.push([start + a, start + b]));
       }
 
-      return { v, eOuter, eInner, eAccent, addPt, addRing, connectRings, addConeWire, addBoxWire };
+      function addArc(rx, rz, y, startA = 0, arcLen = Math.PI, n = 16, targetEdges = eOuter, cx = 0, cz = 0) {
+        const start = v.length;
+        for (let i = 0; i <= n; i++) {
+          const a = startA + (i / n) * arcLen;
+          v.push([cx + rx * Math.cos(a), y, cz + rz * Math.sin(a)]);
+        }
+        for (let i = 0; i < n; i++) targetEdges.push([start + i, start + i + 1]);
+        return { start, count: n + 1 };
+      }
+
+      return { v, eOuter, eInner, eAccent, addPt, addRing, addArc, connectRings, addConeWire, addBoxWire };
     }
 
     function svgDefs() {
@@ -1824,7 +1834,7 @@
       }
     }
 
-    function subdivideGeometryX(geometry, maxDx = 7.5, maxPasses = 5) {
+    function subdivideGeometryX(geometry, maxDx = 14.0, maxPasses = 2) {
       const nonIndexed = geometry.index ? geometry.toNonIndexed() : geometry.clone();
       let posAttr = nonIndexed.getAttribute('position');
       let verts = Array.from(posAttr.array);
@@ -1906,8 +1916,8 @@
       return out;
     }
 
-    function bendSlabToCylinder(flatGeo, slabW, slabH, rBottom, rTop, radialOffset = 0, clampSeam = true) {
-      const geo = subdivideGeometryX(flatGeo, 7.0, 5);
+    function bendSlabToCylinder(flatGeo, slabW, slabH, rBottom, rTop, radialOffset = 0, clampSeam = true, maxDx = 14.0, maxPasses = 2) {
+      const geo = subdivideGeometryX(flatGeo, maxDx, maxPasses);
       const pos = geo.getAttribute('position');
       const uvs = new Float32Array(pos.count * 2);
 
@@ -1934,50 +1944,11 @@
       geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
       pos.needsUpdate = true;
       geo.computeVertexNormals();
-      smoothGeometryNormals(geo);
       return geo;
     }
 
     function smoothGeometryNormals(geo) {
-      const posAttr = geo.getAttribute('position');
-      if (!posAttr) return;
-      const positions = posAttr.array;
-      const norm = new Float32Array(positions.length);
-      const map = new Map();
-
-      for (let i = 0; i < positions.length; i += 9) {
-        const ax = positions[i], ay = positions[i + 1], az = positions[i + 2];
-        const bx = positions[i + 3], by = positions[i + 4], bz = positions[i + 5];
-        const cx = positions[i + 6], cy = positions[i + 7], cz = positions[i + 8];
-
-        const e1x = bx - ax, e1y = by - ay, e1z = bz - az;
-        const e2x = cx - ax, e2y = cy - ay, e2z = cz - az;
-        const nx = e1y * e2z - e1z * e2y;
-        const ny = e1z * e2x - e1x * e2z;
-        const nz = e1x * e2y - e1y * e2x;
-        const len = Math.hypot(nx, ny, nz) || 1;
-        const fnx = nx / len, fny = ny / len, fnz = nz / len;
-
-        for (let k = 0; k < 9; k += 3) {
-          const vx = positions[i + k], vy = positions[i + k + 1], vz = positions[i + k + 2];
-          const key = Math.round(vx * 30) + '_' + Math.round(vy * 30) + '_' + Math.round(vz * 30);
-          let acc = map.get(key);
-          if (!acc) { acc = [0, 0, 0]; map.set(key, acc); }
-          acc[0] += fnx; acc[1] += fny; acc[2] += fnz;
-        }
-      }
-
-      for (let i = 0; i < positions.length; i += 3) {
-        const vx = positions[i], vy = positions[i + 1], vz = positions[i + 2];
-        const key = Math.round(vx * 30) + '_' + Math.round(vy * 30) + '_' + Math.round(vz * 30);
-        const acc = map.get(key);
-        const len = acc ? Math.hypot(acc[0], acc[1], acc[2]) || 1 : 1;
-        norm[i] = acc ? acc[0] / len : 0;
-        norm[i + 1] = acc ? acc[1] / len : 1;
-        norm[i + 2] = acc ? acc[2] / len : 0;
-      }
-      geo.setAttribute('normal', new THREE.BufferAttribute(norm, 3));
-      geo.getAttribute('normal').needsUpdate = true;
+      geo.computeVertexNormals();
     }
 
     function pinholeColumn(u, vStart, vEnd, count, r = 2.6) {
@@ -21342,18 +21313,18 @@
             bevelEnabled: true,
             bevelThickness: bevel,
             bevelSize: bevel * 0.65,
-            bevelSegments: 2,
-            curveSegments: 16
+            bevelSegments: 1,
+            curveSegments: 8
           });
           flatGeo.computeBoundingBox();
           flatGeo.translate(0, 0, -flatGeo.boundingBox.min.z);
 
           const wallGeo = bendSlabToCylinder(flatGeo, slabW, H, rBot, rTop, 0, true);
           flatGeo.dispose();
-          addMeshWithEdges(g, wallGeo, terracottaMat, [0, 6, 0], [0, 0, 0], [1, 1, 1], false);
+          addMeshWithEdges(g, wallGeo, terracottaMat, [0, 6, 0], [0, 0, 0], [1, 1, 1], 30);
 
           // 2. Base Monolítica Circular
-          addMeshWithEdges(g, new THREE.CylinderGeometry(rBot + 4, rBot + 4, 6, 48), terracottaDarkMat, [0, 3, 0], [0, 0, 0], [1, 1, 1], 36);
+          addMeshWithEdges(g, new THREE.CylinderGeometry(rBot + 4, rBot + 4, 6, 36), terracottaDarkMat, [0, 3, 0], [0, 0, 0], [1, 1, 1], 36);
 
           // 3. Placas Recortadas Sobrepostas (Escadas, Molduras e Aro de Óculo)
           for (const ov of spec.overlays) {
@@ -21361,20 +21332,20 @@
             const flatOv = new THREE.ExtrudeGeometry(ovShape, {
               depth: overT,
               bevelEnabled: true,
-              bevelThickness: 0.5,
-              bevelSize: 0.35,
-              bevelSegments: 2,
-              curveSegments: 16
+              bevelThickness: 0.4,
+              bevelSize: 0.25,
+              bevelSegments: 1,
+              curveSegments: 8
             });
             flatOv.computeBoundingBox();
             flatOv.translate(0, 0, -flatOv.boundingBox.min.z);
 
             const ovAngle = ov.u * Math.PI * 2;
             const expVec = [Math.sin(ovAngle) * exp, 0, Math.cos(ovAngle) * exp];
-            const ovGeo = bendSlabToCylinder(flatOv, slabW, H, rBot, rTop, wallT - 0.4, false);
+            const ovGeo = bendSlabToCylinder(flatOv, slabW, H, rBot, rTop, wallT + 0.25, false);
             flatOv.dispose();
 
-            const m = addMeshWithEdges(g, ovGeo, stairsMat, [expVec[0], 6 + expVec[1], expVec[2]], [0, 0, 0], [1, 1, 1], false);
+            const m = addMeshWithEdges(g, ovGeo, stairsMat, [expVec[0], 6 + expVec[1], expVec[2]], [0, 0, 0], [1, 1, 1], 28);
             if (ov.type === 'staircase') m.userData.accessoryType = 'stairs';
           }
 
@@ -21392,17 +21363,19 @@
 
           // 2A. Semicilindro A Frontal explodido (+Z)
           const zA = exp * 1.0;
-          const a0 = sk.addRing(50, 50, 6, 32, sk.eOuter, 0, zA);
-          const a1 = sk.addRing(50, 50, 195, 32, sk.eOuter, 0, zA);
-          sk.connectRings(a0, a1, 32, 4, sk.eOuter);
+          const a0 = sk.addArc(50, 50, 6, 0, Math.PI, 16, sk.eOuter, 0, zA);
+          const a1 = sk.addArc(50, 50, 195, 0, Math.PI, 16, sk.eOuter, 0, zA);
+          sk.connectRings(a0, a1, 17, 4, sk.eOuter);
+          sk.eOuter.push([a0.start, a1.start], [a0.start + 16, a1.start + 16]);
           sk.addBoxWire(0, 31, 50 + zA, 26, 62, 6, 0, 0, sk.eAccent);
           sk.addRing(12, 12, 146, 16, sk.eAccent, 0, 50 + zA);
 
           // 2B. Semicilindro B Traseiro explodido (-Z)
           const zB = -exp * 1.0;
-          const c0 = sk.addRing(50, 50, 6, 32, sk.eOuter, 0, zB);
-          const c1 = sk.addRing(50, 50, 195, 32, sk.eOuter, 0, zB);
-          sk.connectRings(c0, c1, 32, 4, sk.eOuter);
+          const c0 = sk.addArc(50, 50, 6, Math.PI, Math.PI, 16, sk.eOuter, 0, zB);
+          const c1 = sk.addArc(50, 50, 195, Math.PI, Math.PI, 16, sk.eOuter, 0, zB);
+          sk.connectRings(c0, c1, 17, 4, sk.eOuter);
+          sk.eOuter.push([c0.start, c1.start], [c0.start + 16, c1.start + 16]);
           sk.addBoxWire(0, 95, -50 + zB, 10, 60, 6, 0, 0, sk.eAccent);
 
           // 3. Placa da Escadaria Externa 5 Degraus com Mureta
@@ -21411,8 +21384,8 @@
           }
 
           // 4. Vela interna
-          sk.addRing(19, 19, 6, 24, sk.eInner);
-          sk.addRing(19, 19, 20, 24, sk.eInner);
+          sk.addRing(19, 19, 6, 20, sk.eInner);
+          sk.addRing(19, 19, 20, 20, sk.eInner);
 
           return sk;
         },
@@ -21572,37 +21545,37 @@
             bevelEnabled: true,
             bevelThickness: bevel,
             bevelSize: bevel * 0.65,
-            bevelSegments: 2,
-            curveSegments: 16
+            bevelSegments: 1,
+            curveSegments: 8
           });
           flatGeo.computeBoundingBox();
           flatGeo.translate(0, 0, -flatGeo.boundingBox.min.z);
 
           const wallGeo = bendSlabToCylinder(flatGeo, slabW, H, rBot, rTop, 0, true);
           flatGeo.dispose();
-          addMeshWithEdges(g, wallGeo, terracottaMat, [0, 6, 0], [0, 0, 0], [1, 1, 1], false);
+          addMeshWithEdges(g, wallGeo, terracottaMat, [0, 6, 0], [0, 0, 0], [1, 1, 1], 30);
 
-          addMeshWithEdges(g, new THREE.CylinderGeometry(rBot + 4, rBot + 4, 6, 48), terracottaDarkMat, [0, 3, 0], [0, 0, 0], [1, 1, 1], 36);
+          addMeshWithEdges(g, new THREE.CylinderGeometry(rBot + 4, rBot + 4, 6, 36), terracottaDarkMat, [0, 3, 0], [0, 0, 0], [1, 1, 1], 36);
 
           for (const ov of spec.overlays) {
             const ovShape = createTowerOverlayShape(ov, slabW, H);
             const flatOv = new THREE.ExtrudeGeometry(ovShape, {
               depth: overT,
               bevelEnabled: true,
-              bevelThickness: 0.5,
-              bevelSize: 0.35,
-              bevelSegments: 2,
-              curveSegments: 16
+              bevelThickness: 0.4,
+              bevelSize: 0.25,
+              bevelSegments: 1,
+              curveSegments: 8
             });
             flatOv.computeBoundingBox();
             flatOv.translate(0, 0, -flatOv.boundingBox.min.z);
 
             const ovAngle = ov.u * Math.PI * 2;
             const expVec = [Math.sin(ovAngle) * exp, 0, Math.cos(ovAngle) * exp];
-            const ovGeo = bendSlabToCylinder(flatOv, slabW, H, rBot, rTop, wallT - 0.4, false);
+            const ovGeo = bendSlabToCylinder(flatOv, slabW, H, rBot, rTop, wallT + 0.25, false);
             flatOv.dispose();
 
-            const m = addMeshWithEdges(g, ovGeo, stairsMat, [expVec[0], 6 + expVec[1], expVec[2]], [0, 0, 0], [1, 1, 1], false);
+            const m = addMeshWithEdges(g, ovGeo, stairsMat, [expVec[0], 6 + expVec[1], expVec[2]], [0, 0, 0], [1, 1, 1], 28);
             if (ov.type === 'staircase') m.userData.accessoryType = 'stairs';
           }
 
@@ -21619,16 +21592,18 @@
 
           // 2A. Semicilindro A Frontal explodido (+Z)
           const zA = exp * 1.0;
-          const a0 = sk.addRing(47.5, 47.5, 6, 32, sk.eOuter, 0, zA);
-          const a1 = sk.addRing(47.5, 47.5, 150, 32, sk.eOuter, 0, zA);
-          sk.connectRings(a0, a1, 32, 4, sk.eOuter);
+          const a0 = sk.addArc(47.5, 47.5, 6, 0, Math.PI, 16, sk.eOuter, 0, zA);
+          const a1 = sk.addArc(47.5, 47.5, 150, 0, Math.PI, 16, sk.eOuter, 0, zA);
+          sk.connectRings(a0, a1, 17, 4, sk.eOuter);
+          sk.eOuter.push([a0.start, a1.start], [a0.start + 16, a1.start + 16]);
           sk.addBoxWire(0, 27, 47.5 + zA, 22, 54, 6, 0, 0, sk.eAccent);
 
           // 2B. Semicilindro B Traseiro explodido (-Z)
           const zB = -exp * 1.0;
-          const c0 = sk.addRing(47.5, 47.5, 6, 32, sk.eOuter, 0, zB);
-          const c1 = sk.addRing(47.5, 47.5, 150, 32, sk.eOuter, 0, zB);
-          sk.connectRings(c0, c1, 32, 4, sk.eOuter);
+          const c0 = sk.addArc(47.5, 47.5, 6, Math.PI, Math.PI, 16, sk.eOuter, 0, zB);
+          const c1 = sk.addArc(47.5, 47.5, 150, Math.PI, Math.PI, 16, sk.eOuter, 0, zB);
+          sk.connectRings(c0, c1, 17, 4, sk.eOuter);
+          sk.eOuter.push([c0.start, c1.start], [c0.start + 16, c1.start + 16]);
           sk.addBoxWire(0, 75, -47.5 + zB, 9, 52, 6, 0, 0, sk.eAccent);
 
           // 3. Placa da Escada 4 Degraus com Mureta
@@ -21637,8 +21612,8 @@
           }
 
           // 4. Vela interna
-          sk.addRing(19, 19, 6, 24, sk.eInner);
-          sk.addRing(19, 19, 20, 24, sk.eInner);
+          sk.addRing(19, 19, 6, 20, sk.eInner);
+          sk.addRing(19, 19, 20, 20, sk.eInner);
 
           return sk;
         },
@@ -21782,37 +21757,37 @@
             bevelEnabled: true,
             bevelThickness: bevel,
             bevelSize: bevel * 0.65,
-            bevelSegments: 2,
-            curveSegments: 16
+            bevelSegments: 1,
+            curveSegments: 8
           });
           flatGeo.computeBoundingBox();
           flatGeo.translate(0, 0, -flatGeo.boundingBox.min.z);
 
           const wallGeo = bendSlabToCylinder(flatGeo, slabW, H, rBot, rTop, 0, true);
           flatGeo.dispose();
-          addMeshWithEdges(g, wallGeo, terracottaMat, [0, 6, 0], [0, 0, 0], [1, 1, 1], false);
+          addMeshWithEdges(g, wallGeo, terracottaMat, [0, 6, 0], [0, 0, 0], [1, 1, 1], 30);
 
-          addMeshWithEdges(g, new THREE.CylinderGeometry(rBot + 4, rBot + 4, 6, 48), terracottaDarkMat, [0, 3, 0], [0, 0, 0], [1, 1, 1], 36);
+          addMeshWithEdges(g, new THREE.CylinderGeometry(rBot + 4, rBot + 4, 6, 36), terracottaDarkMat, [0, 3, 0], [0, 0, 0], [1, 1, 1], 36);
 
           for (const ov of spec.overlays) {
             const ovShape = createTowerOverlayShape(ov, slabW, H);
             const flatOv = new THREE.ExtrudeGeometry(ovShape, {
               depth: overT,
               bevelEnabled: true,
-              bevelThickness: 0.5,
-              bevelSize: 0.35,
-              bevelSegments: 2,
-              curveSegments: 16
+              bevelThickness: 0.4,
+              bevelSize: 0.25,
+              bevelSegments: 1,
+              curveSegments: 8
             });
             flatOv.computeBoundingBox();
             flatOv.translate(0, 0, -flatOv.boundingBox.min.z);
 
             const ovAngle = ov.u * Math.PI * 2;
             const expVec = [Math.sin(ovAngle) * exp, 0, Math.cos(ovAngle) * exp];
-            const ovGeo = bendSlabToCylinder(flatOv, slabW, H, rBot, rTop, wallT - 0.4, false);
+            const ovGeo = bendSlabToCylinder(flatOv, slabW, H, rBot, rTop, wallT + 0.25, false);
             flatOv.dispose();
 
-            const m = addMeshWithEdges(g, ovGeo, stairsMat, [expVec[0], 6 + expVec[1], expVec[2]], [0, 0, 0], [1, 1, 1], false);
+            const m = addMeshWithEdges(g, ovGeo, stairsMat, [expVec[0], 6 + expVec[1], expVec[2]], [0, 0, 0], [1, 1, 1], 28);
             if (ov.type === 'staircase') m.userData.accessoryType = 'stairs';
           }
 
@@ -21829,16 +21804,18 @@
 
           // 2A. Semicilindro A Frontal explodido (+Z)
           const zA = exp * 1.0;
-          const a0 = sk.addRing(60, 60, 6, 32, sk.eOuter, 0, zA);
-          const a1 = sk.addRing(60, 60, 120, 32, sk.eOuter, 0, zA);
-          sk.connectRings(a0, a1, 32, 4, sk.eOuter);
+          const a0 = sk.addArc(60, 60, 6, 0, Math.PI, 16, sk.eOuter, 0, zA);
+          const a1 = sk.addArc(60, 60, 120, 0, Math.PI, 16, sk.eOuter, 0, zA);
+          sk.connectRings(a0, a1, 17, 4, sk.eOuter);
+          sk.eOuter.push([a0.start, a1.start], [a0.start + 16, a1.start + 16]);
           sk.addBoxWire(-22, 30, 60 + zA, 20, 60, 6, 0, 0, sk.eAccent);
 
           // 2B. Semicilindro B Traseiro explodido (-Z)
           const zB = -exp * 1.0;
-          const c0 = sk.addRing(60, 60, 6, 32, sk.eOuter, 0, zB);
-          const c1 = sk.addRing(60, 60, 120, 32, sk.eOuter, 0, zB);
-          sk.connectRings(c0, c1, 32, 4, sk.eOuter);
+          const c0 = sk.addArc(60, 60, 6, Math.PI, Math.PI, 16, sk.eOuter, 0, zB);
+          const c1 = sk.addArc(60, 60, 120, Math.PI, Math.PI, 16, sk.eOuter, 0, zB);
+          sk.connectRings(c0, c1, 17, 4, sk.eOuter);
+          sk.eOuter.push([c0.start, c1.start], [c0.start + 16, c1.start + 16]);
           sk.addRing(13, 13, 50, 16, sk.eAccent, 0, -60 + zB);
 
           // 3. Placa Rampa Escalonada 6 Degraus
@@ -21847,8 +21824,8 @@
           }
 
           // 4. Vela interna
-          sk.addRing(19, 19, 6, 24, sk.eInner);
-          sk.addRing(19, 19, 20, 24, sk.eInner);
+          sk.addRing(19, 19, 6, 20, sk.eInner);
+          sk.addRing(19, 19, 20, 20, sk.eInner);
 
           return sk;
         },
