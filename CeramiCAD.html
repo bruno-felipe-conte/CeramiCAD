@@ -90,6 +90,7 @@
   </script>
 
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'self';" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CeramiCAD — Expositor 3D & Moldes A4 1:1 (247 Modelos • 46 Lotes)</title>
 
@@ -98,10 +99,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://unpkg.com/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js" integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js" integrity="sha384-wagZhIFgY4hD+7awjQjR4e2E294y6J2HSnd8eTNc15ZubTeQeVRZwhQJ+W6hnBsf" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/exporters/STLExporter.js" integrity="sha384-4hnpAxcCdErKDH3j3vbC5jLfELShp3G/uQ8o7uSSQomOoxn3G3o083Azy+tj0/VT" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 
   <style>
     * {
@@ -811,10 +812,37 @@
       return STORAGE_KEY_PREFIX + (pieceCode || (PIECES[activeIdx] ? PIECES[activeIdx].code : '001'));
     }
 
+    function sanitizePieceConfig(rawCfg) {
+      if (!rawCfg || typeof rawCfg !== 'object') return null;
+      const clean = {
+        code: typeof rawCfg.code === 'string' ? rawCfg.code : '',
+        pieceUniformScale: Number.isFinite(rawCfg.pieceUniformScale)
+          ? Math.max(0.3, Math.min(2.5, Number(rawCfg.pieceUniformScale))) : 1.0,
+        pieceHeightScale: Number.isFinite(rawCfg.pieceHeightScale)
+          ? Math.max(0.3, Math.min(3.0, Number(rawCfg.pieceHeightScale))) : 1.0,
+        accTransforms: {}
+      };
+      if (rawCfg.accTransforms && typeof rawCfg.accTransforms === 'object') {
+        Object.keys(rawCfg.accTransforms).forEach(k => {
+          if (k === '__proto__' || k === 'prototype' || k === 'constructor') return;
+          const tr = rawCfg.accTransforms[k];
+          if (tr && typeof tr === 'object') {
+            clean.accTransforms[k] = {
+              offset: Number.isFinite(tr.offset) ? Math.max(-100, Math.min(100, Number(tr.offset))) : 0,
+              height: Number.isFinite(tr.height) ? Math.max(-100, Math.min(100, Number(tr.height))) : 0,
+              angle: Number.isFinite(tr.angle) ? Math.max(-180, Math.min(180, Number(tr.angle))) : 0,
+              scale: Number.isFinite(tr.scale) ? Math.max(0.2, Math.min(3.0, Number(tr.scale))) : 1.0
+            };
+          }
+        });
+      }
+      return clean;
+    }
+
     function loadSavedPieceConfig(pieceCode) {
       try {
         const raw = localStorage.getItem(getStorageKey(pieceCode));
-        if (raw) return JSON.parse(raw);
+        if (raw) return sanitizePieceConfig(JSON.parse(raw));
       } catch (e) {
         console.warn('Erro ao carregar do localStorage:', e);
       }
@@ -920,15 +948,19 @@
       reader.onload = (e) => {
         try {
           const data = JSON.parse(e.target.result);
-          if (data && typeof data === 'object') {
+          if (data && typeof data === 'object' && !Array.isArray(data)) {
             let count = 0;
+            const validCodes = new Set(PIECES.map(p => String(p.code)));
             Object.keys(data).forEach(code => {
-              if (data[code]) {
-                localStorage.setItem(getStorageKey(code), JSON.stringify(data[code]));
+              if (code === '__proto__' || code === 'prototype' || code === 'constructor') return;
+              if (!validCodes.has(code)) return;
+              const sanitized = sanitizePieceConfig(data[code]);
+              if (sanitized) {
+                localStorage.setItem(getStorageKey(code), JSON.stringify(sanitized));
                 count++;
               }
             });
-            showToast('Restaurados ajustes de ' + count + ' modelo(s)!');
+            showToast('Restaurados ajustes de ' + count + ' modelo(s) com validação!');
             selectPiece(activeIdx);
           }
         } catch (err) {
